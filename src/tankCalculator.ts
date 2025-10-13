@@ -11,17 +11,18 @@ const LITERS_PER_CUFT = 28.31685;
 const KG_LITER_IN_LBS_CUFT = LBS_PER_KG * LITERS_PER_CUFT;
 
 // Density constants
-const STEEL_DENSITY = 7.9; // kg/liter
+const STEEL_DENSITY = 7.85; // kg/liter (Chrome-molybdenum steel used in scuba tanks)
 const STEEL_DENSITY_IMP = STEEL_DENSITY * KG_LITER_IN_LBS_CUFT; // lbs/cuft
-const ALU_DENSITY = 2.699; // kg/liter
+const ALU_DENSITY = 2.70; // kg/liter (6061-T6 aluminum alloy used in scuba tanks)
 const ALU_DENSITY_IMP = ALU_DENSITY * KG_LITER_IN_LBS_CUFT; // lbs/cuft
-const AIR_DENSITY = 0.001225; // kg/liter
+const AIR_DENSITY = 0.001225; // kg/liter (at STP: 15°C, 1 bar)
 const AIR_DENSITY_IMP = AIR_DENSITY * KG_LITER_IN_LBS_CUFT; // lbs/cuft
 const SALT_DENSITY = 1.024; // kg/liter
 const SALT_DENSITY_IMP = SALT_DENSITY * KG_LITER_IN_LBS_CUFT; // lbs/cuft
 const FRESH_DENSITY = 1.0; // kg/liter
 const FRESH_DENSITY_IMP = FRESH_DENSITY * KG_LITER_IN_LBS_CUFT; // lbs/cuft
-const VALVE_WEIGHT = 0.8; // kg
+const VALVE_WEIGHT = 0.9; // kg (typical DIN/yoke valve weight)
+const MANIFOLD_WEIGHT = 1.5; // kg (additional weight for doubles manifold beyond two valves)
 
 export interface TankInput {
   // Metric
@@ -79,7 +80,8 @@ export function calculateTankMetric(input: TankInput): TankResult {
   let valve = hasValve ? VALVE_WEIGHT : 0;
 
   if (isDoubles) {
-    valve = valve * 2;
+    // Doubles: 2 valves + manifold (more realistic than just 2x valve weight)
+    valve = hasValve ? (VALVE_WEIGHT * 2 + MANIFOLD_WEIGHT) : 0;
     liters = liters * 2;
     kg = kg * 2;
   }
@@ -147,7 +149,8 @@ export function calculateTankImperial(input: TankInput): TankResult {
   let valve = hasValve ? VALVE_WEIGHT * LBS_PER_KG : 0;
 
   if (isDoubles) {
-    valve = valve * 2;
+    // Doubles: 2 valves + manifold (more realistic than just 2x valve weight)
+    valve = hasValve ? ((VALVE_WEIGHT * 2 + MANIFOLD_WEIGHT) * LBS_PER_KG) : 0;
     cuft = cuft * 2;
     lbs = lbs * 2;
   }
@@ -203,4 +206,3 @@ export function calculateTankImperial(input: TankInput): TankResult {
     calculation: txt,
   };
 }
-
