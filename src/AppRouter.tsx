@@ -17,23 +17,23 @@ function App() {
     <div className="app">
       <div className="navigation">
         <button
-          className={`nav-btn ${currentPath === '/blender.html' ? 'active' : ''}`}
-          onClick={() => handleNavigation('/blender.html')}
+          className={`nav-btn ${currentPath.endsWith('/blender.html') ? 'active' : ''}`}
+          onClick={() => handleNavigation('blender.html')}
         >
           Gas Blender
         </button>
         <button
-          className={`nav-btn ${currentPath === '/tanks.html' ? 'active' : ''}`}
-          onClick={() => handleNavigation('/tanks.html')}
+          className={`nav-btn ${currentPath.endsWith('/tanks.html') ? 'active' : ''}`}
+          onClick={() => handleNavigation('tanks.html')}
         >
           Tank Calculator
         </button>
       </div>
 
       <Routes>
-        <Route path="/blender.html" element={<GasBlender />} />
-        <Route path="/tanks.html" element={<TankCalculator />} />
-        <Route path="/" element={<Navigate to="/blender.html" replace />} />
+        <Route path="blender.html" element={<GasBlender />} />
+        <Route path="tanks.html" element={<TankCalculator />} />
+        <Route path="/" element={<Navigate to="blender.html" replace />} />
       </Routes>
     </div>
   );
@@ -41,7 +41,7 @@ function App() {
 
 function AppRouter() {
   return (
-    <BrowserRouter>
+    <BrowserRouter basename={import.meta.env.BASE_URL}>
       <App />
     </BrowserRouter>
   );
