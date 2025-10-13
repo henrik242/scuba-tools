@@ -12,21 +12,25 @@ const DEFAULT_AVAILABLE_GASES: Gas[] = [
 
 function GasBlender() {
   // Starting gas state
-  const [startVolume, setStartVolume] = useState<number>(3);
-  const [startO2, setStartO2] = useState<number>(14);
-  const [startHe, setStartHe] = useState<number>(67);
-  const [startPressure, setStartPressure] = useState<number>(47);
+  const [startVolume, setStartVolume] = useState<number>(11);
+  const [startO2, setStartO2] = useState<number>(0);
+  const [startHe, setStartHe] = useState<number>(0);
+  const [startPressure, setStartPressure] = useState<number>(0);
 
   // Target gas state
-  const [targetO2, setTargetO2] = useState<number>(15);
-  const [targetHe, setTargetHe] = useState<number>(55);
+  const [targetO2, setTargetO2] = useState<number>(18);
+  const [targetHe, setTargetHe] = useState<number>(45);
   const [targetPressure, setTargetPressure] = useState<number>(220);
 
   // Available gases
   const [availableGases, setAvailableGases] = useState<Gas[]>(DEFAULT_AVAILABLE_GASES);
-  const [selectedGases, setSelectedGases] = useState<Record<string, boolean>>(
-    DEFAULT_AVAILABLE_GASES.reduce((acc, gas) => ({ ...acc, [gas.name]: true }), {})
-  );
+  const [selectedGases, setSelectedGases] = useState<Record<string, boolean>>({
+    'Air': true,
+    'O2': true,
+    'Helium': true,
+    'Nitrox 32': false,
+    '10/70': false,
+  });
 
   // Results
   const [blendingSteps, setBlendingSteps] = useState<ReturnType<typeof calculateBlendingSteps> | null>(null);
