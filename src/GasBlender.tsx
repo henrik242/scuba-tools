@@ -116,7 +116,10 @@ function GasBlender() {
   return (
     <div className="app">
       <div className="container">
-        <h1>⚓ Gas Blender Tool</h1>
+        <h1>
+          <img src="/favicon.svg" alt="" style={{ width: '2rem', height: '2rem', verticalAlign: 'middle', marginRight: '0.5rem' }} />
+          Gas Blender Tool
+        </h1>
 
         <div className="card">
           <h2>Starting Gas</h2>

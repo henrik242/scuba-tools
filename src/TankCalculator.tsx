@@ -135,7 +135,10 @@ function TankCalculator() {
   return (
     <div className="app">
       <div className="container">
-        <h1>⚓ Tank Weight & Buoyancy Calculator</h1>
+        <h1>
+          <img src="/favicon.svg" alt="" style={{ width: '2rem', height: '2rem', verticalAlign: 'middle', marginRight: '0.5rem' }} />
+          Tank Weight & Buoyancy Calculator
+        </h1>
 
         <div className="card">
           <h2>Predefined Tanks</h2>
