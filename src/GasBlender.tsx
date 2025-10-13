@@ -90,14 +90,19 @@ function GasBlender() {
     if (field === 'name') {
       newGases[index] = { ...newGases[index], name: value as string };
     } else {
-      newGases[index] = { ...newGases[index], [field]: parseFloat(value.toString()) };
+      const updatedGas = { ...newGases[index], [field]: parseFloat(value.toString()) };
+      // Update the name to match the O2/He values if it's an editable gas
+      if (updatedGas.editable) {
+        updatedGas.name = `${updatedGas.o2}/${updatedGas.he}`;
+      }
+      newGases[index] = updatedGas;
     }
     setAvailableGases(newGases);
   };
 
   const addCustomGas = () => {
     const newGas: Gas = {
-      name: `Custom ${availableGases.length + 1}`,
+      name: `21/0`,
       o2: 21,
       he: 0,
       editable: true
@@ -138,7 +143,7 @@ function GasBlender() {
               />
             </div>
             <div className="form-group">
-              <label>Current Pressure (bar)</label>
+              <label>Pressure (bar)</label>
               <input
                 type="number"
                 value={startPressure}
@@ -233,12 +238,6 @@ function GasBlender() {
                 </label>
                 {gas.editable ? (
                   <div className="gas-inputs">
-                    <input
-                      type="text"
-                      value={gas.name}
-                      onChange={(e) => updateGas(index, 'name', e.target.value)}
-                      className="gas-name-input"
-                    />
                     <input
                       type="number"
                       value={gas.o2}
