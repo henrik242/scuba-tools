@@ -94,7 +94,7 @@ export function calculateTankMetric(input: TankInput): TankResult {
   const full = volume - kg - valve - air;
 
   // Build calculation text
-  let txt = `<br><br>Steel has a density of ${STEEL_DENSITY} kg/liter`;
+  let txt = `Steel has a density of ${STEEL_DENSITY} kg/liter`;
   if (metal !== STEEL_DENSITY) {
     txt += `, and aluminium is ${ALU_DENSITY} kg/liter`;
   }
