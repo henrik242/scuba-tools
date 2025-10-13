@@ -6,6 +6,26 @@
   flex-direction: column;
 }
 
+/* Page switcher link in top-left */
+.page-switcher {
+  margin-bottom: 1rem;
+}
+
+.page-link {
+  color: white;
+  font-size: 0.875rem;
+  text-decoration: none;
+  cursor: pointer;
+  opacity: 0.9;
+  transition: opacity 0.2s;
+  display: inline-block;
+}
+
+.page-link:hover {
+  opacity: 1;
+  text-decoration: underline;
+}
+
 .container {
   max-width: 800px;
   margin: 0 auto;

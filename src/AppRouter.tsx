@@ -13,21 +13,20 @@ function App() {
     navigate(path + location.search);
   };
 
+  // Determine which page we're on and what the other tool is
+  const isOnBlender = currentPath.endsWith('/blender.html');
+  const otherTool = isOnBlender ? 'tanks.html' : 'blender.html';
+  const otherToolName = isOnBlender ? 'Tank Calculator' : 'Gas Blender';
+
   return (
     <div className="app">
-      <div className="navigation">
-        <button
-          className={`nav-btn ${currentPath.endsWith('/blender.html') ? 'active' : ''}`}
-          onClick={() => handleNavigation('blender.html')}
+      <div className="page-switcher">
+        <a
+          onClick={() => handleNavigation(otherTool)}
+          className="page-link"
         >
-          Gas Blender
-        </button>
-        <button
-          className={`nav-btn ${currentPath.endsWith('/tanks.html') ? 'active' : ''}`}
-          onClick={() => handleNavigation('tanks.html')}
-        >
-          Tank Calculator
-        </button>
+          ← {otherToolName}
+        </a>
       </div>
 
       {/* Wrap routes in a flex child to fill space */}
