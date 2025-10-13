@@ -40,8 +40,10 @@ function App() {
 }
 
 function AppRouter() {
-  // Auto-detect the base path from index.html location
-  const basename = window.location.pathname.replace(/\/[^/]*\.html$/, '') || '/';
+  // Auto-detect the base path from the current URL
+  // Extract everything before the last .html file
+  const pathname = window.location.pathname;
+  const basename = pathname.substring(0, pathname.lastIndexOf('/') + 1) || '/';
 
   return (
     <BrowserRouter basename={basename}>
