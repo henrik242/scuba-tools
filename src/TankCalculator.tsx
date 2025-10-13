@@ -5,7 +5,7 @@ import './App.css'
 function TankCalculator() {
   const [liters, setLiters] = useState<number>(12);
   const [bar, setBar] = useState<number>(232);
-  const [kg, setKg] = useState<number>(29);
+  const [kg, setKg] = useState<number>(14.5);
   const [cuft, setCuft] = useState<number>(0);
   const [psi, setPsi] = useState<number>(0);
   const [lbs, setLbs] = useState<number>(0);
@@ -17,7 +17,7 @@ function TankCalculator() {
 
   const [result, setResult] = useState<TankResult | null>(null);
   const [showCalculation, setShowCalculation] = useState<boolean>(false);
-  const [selectedTank, setSelectedTank] = useState<string>("metric;12;232;29.0;0;1");
+  const [selectedTank, setSelectedTank] = useState<string>("metric;12;232;14.5;0;1");
 
   // Load state from URL on mount
   useEffect(() => {
@@ -63,7 +63,7 @@ function TankCalculator() {
       }
 
       // Check if the loaded values match the default tank, otherwise clear selection
-      if (loadedLiters === 12 && loadedBar === 232 && loadedKg === 29 && !loadedAlu && loadedDoubles) {
+      if (loadedLiters === 12 && loadedBar === 232 && loadedKg === 14.5 && !loadedAlu && loadedDoubles) {
         // Keep the default selection
       } else {
         setSelectedTank(""); // Clear selection when loading different values from URL
@@ -112,7 +112,7 @@ function TankCalculator() {
       const input: TankInput = {
         liters: 12,
         bar: 232,
-        kg: 29,
+        kg: 14.5,
         cuft: 0,
         psi: 0,
         lbs: 0,
@@ -126,7 +126,7 @@ function TankCalculator() {
       setCuft(res.cuft);
       setPsi(res.psi);
       setLbs(res.lbs);
-      // Keep selectedTank as "metric;12;232;29.0;0;1" (default state)
+      // Keep selectedTank as "metric;12;232;14.5;0;1" (default state)
     }
   }, []);
 
@@ -273,8 +273,8 @@ function TankCalculator() {
               <option value="metric;12;232;14.5;0;0">12L 232 bar (14.5 kg)</option>
               <option value="metric;7;300;10.5;0;0">7L 300 bar (10.5 kg)</option>
               <option value="metric;10;300;14.0;0;0">10L 300 bar (14.0 kg)</option>
-              <option value="metric;12;200;28.0;0;1">Twin 12L 200 bar (28.0 kg)</option>
-              <option value="metric;12;232;29.0;0;1">Twin 12L 232 bar (29.0 kg)</option>
+              <option value="metric;12;200;14.0;0;1">Twin 12L 200 bar (14.0 kg per tank)</option>
+              <option value="metric;12;232;14.5;0;1">Twin 12L 232 bar (14.5 kg per tank)</option>
             </optgroup>
             <optgroup label="Metric - Aluminium">
               <option value="metric;11.1;207;14.2;1;0">S80 (11.1L 207 bar, 14.2 kg)</option>
@@ -312,7 +312,7 @@ function TankCalculator() {
             <div className="tank-row header">
               <div>Liters</div>
               <div>Bar</div>
-              <div>Weight (kg)</div>
+              <div>Weight per tank (kg)</div>
               <div>Buoyancy (kg)</div>
             </div>
             <div className="tank-row">
@@ -424,7 +424,7 @@ function TankCalculator() {
             <div className="tank-row header">
               <div>Cuft</div>
               <div>PSI</div>
-              <div>Weight (lbs)</div>
+              <div>Weight per tank (lbs)</div>
               <div>Buoyancy (lbs)</div>
             </div>
           </div>
