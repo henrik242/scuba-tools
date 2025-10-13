@@ -14,6 +14,7 @@ function TankCalculator() {
   const [isSaltWater, setIsSaltWater] = useState<boolean>(true);
   const [hasValve, setHasValve] = useState<boolean>(true);
   const [isDoubles, setIsDoubles] = useState<boolean>(true);
+  const [useMetric, setUseMetric] = useState<boolean>(true);
 
   const [result, setResult] = useState<TankResult | null>(null);
   const [showCalculation, setShowCalculation] = useState<boolean>(false);
@@ -40,6 +41,7 @@ function TankCalculator() {
       setIsAluminium(loadedAlu);
       setHasValve(loadedValve);
       setIsDoubles(loadedDoubles);
+      setUseMetric(true);
 
       // Perform initial calculation if we have values
       if (loadedKg > 0 && loadedLiters > 0 && loadedBar > 0) {
@@ -84,6 +86,7 @@ function TankCalculator() {
       setIsAluminium(loadedAlu);
       setHasValve(loadedValve);
       setIsDoubles(loadedDoubles);
+      setUseMetric(false);
 
       // Perform initial calculation if we have values
       if (loadedLbs > 0 && loadedCuft > 0 && loadedPsi > 0) {
@@ -135,16 +138,22 @@ function TankCalculator() {
     if (kg === 0 && liters === 0 && bar === 0) return; // Don't update URL if all zeros
 
     const params = new URLSearchParams();
-    params.set('kg', kg.toString());
-    params.set('liters', liters.toString());
-    params.set('bar', bar.toString());
+    if (useMetric) {
+      params.set('kg', kg.toString());
+      params.set('liters', liters.toString());
+      params.set('bar', bar.toString());
+    } else {
+      params.set('lbs', lbs.toString());
+      params.set('cuft', cuft.toString());
+      params.set('psi', psi.toString());
+    }
     params.set('salt', isSaltWater.toString());
     params.set('alu', isAluminium.toString());
     params.set('valve', hasValve.toString());
     params.set('doubles', isDoubles.toString());
 
     window.location.hash = params.toString();
-  }, [kg, liters, bar, isSaltWater, isAluminium, hasValve, isDoubles]);
+  }, [kg, liters, bar, lbs, cuft, psi, isSaltWater, isAluminium, hasValve, isDoubles, useMetric]);
 
   // Recalculate when options change
   useEffect(() => {
@@ -237,6 +246,7 @@ function TankCalculator() {
       setKg(parseFloat(k));
       setIsAluminium(alu === '1');
       setIsDoubles(doubles === '1');
+      setUseMetric(true);
       handleMetricUpdate(parseFloat(l), parseFloat(b), parseFloat(k));
     } else if (type === 'imperial') {
       const [cf, p, lb, alu, doubles] = params;
@@ -245,6 +255,7 @@ function TankCalculator() {
       setLbs(parseFloat(lb));
       setIsAluminium(alu === '1');
       setIsDoubles(doubles === '1');
+      setUseMetric(false);
       handleImperialUpdate(parseFloat(cf), parseFloat(p), parseFloat(lb));
     }
   };
@@ -306,128 +317,171 @@ function TankCalculator() {
         </div>
 
         <div className="card">
-          <h2>Tank Parameters</h2>
-
-          <div className="tank-table">
-            <div className="tank-row header">
-              <div>Liters</div>
-              <div>Bar</div>
-              <div>Weight per tank (kg)</div>
-              <div>Buoyancy (kg)</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+            <h2 style={{ marginBottom: 0, borderBottom: 'none', paddingBottom: 0 }}>Tank Parameters</h2>
+            <div className="unit-switch">
+              <button
+                className={`unit-switch-btn ${useMetric ? 'active' : ''}`}
+                onClick={() => setUseMetric(true)}
+              >
+                Metric
+              </button>
+              <button
+                className={`unit-switch-btn ${!useMetric ? 'active' : ''}`}
+                onClick={() => setUseMetric(false)}
+              >
+                Imperial
+              </button>
             </div>
-            <div className="tank-row">
-              <div>
+          </div>
+
+          {useMetric ? (
+            <div className="form-grid">
+              <div className="form-group">
+                <label htmlFor="liters">Liters</label>
                 <input
+                  id="liters"
                   type="number"
                   value={liters || ''}
                   onChange={(e) => {
                     const val = parseFloat(e.target.value) || 0;
                     setLiters(val);
-                    setSelectedTank(""); // Reset dropdown on manual edit
+                    setSelectedTank("");
                     handleMetricUpdate(val, bar, kg);
                   }}
                   step="0.1"
                   placeholder="0"
                 />
               </div>
-              <div>
+              <div className="form-group">
+                <label htmlFor="bar">Bar</label>
                 <input
+                  id="bar"
                   type="number"
                   value={bar || ''}
                   onChange={(e) => {
                     const val = parseFloat(e.target.value) || 0;
                     setBar(val);
-                    setSelectedTank(""); // Reset dropdown on manual edit
+                    setSelectedTank("");
                     handleMetricUpdate(liters, val, kg);
                   }}
                   step="1"
                   placeholder="0"
                 />
               </div>
-              <div>
+              <div className="form-group">
+                <label htmlFor="kg">Weight per tank (kg)</label>
                 <input
+                  id="kg"
                   type="number"
                   value={kg || ''}
                   onChange={(e) => {
                     const val = parseFloat(e.target.value) || 0;
                     setKg(val);
-                    setSelectedTank(""); // Reset dropdown on manual edit
+                    setSelectedTank("");
                     handleMetricUpdate(liters, bar, val);
                   }}
                   step="0.1"
                   placeholder="0"
                 />
               </div>
-              <div>
+              <div className="form-group">
+                <label htmlFor="emptyBuoyancyKg">Empty buoyancy (kg)</label>
                 <input
+                  id="emptyBuoyancyKg"
                   type="text"
-                  value={result ? `${result.emptyBuoyancyKg}/${result.fullBuoyancyKg}` : '0/0'}
+                  value={result ? result.emptyBuoyancyKg : '0'}
                   readOnly
-                  className="readonly-input"
+                  disabled
+                  className="buoyancy-result"
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="fullBuoyancyKg">Full buoyancy (kg)</label>
+                <input
+                  id="fullBuoyancyKg"
+                  type="text"
+                  value={result ? result.fullBuoyancyKg : '0'}
+                  readOnly
+                  disabled
+                  className="buoyancy-result"
                 />
               </div>
             </div>
-
-            <div className="tank-row">
-              <div>
+          ) : (
+            <div className="form-grid">
+              <div className="form-group">
+                <label htmlFor="cuft">Cuft</label>
                 <input
+                  id="cuft"
                   type="number"
                   value={cuft || ''}
                   onChange={(e) => {
                     const val = parseFloat(e.target.value) || 0;
                     setCuft(val);
-                    setSelectedTank(""); // Reset dropdown on manual edit
+                    setSelectedTank("");
                     handleImperialUpdate(val, psi, lbs);
                   }}
                   step="0.1"
                   placeholder="0"
                 />
               </div>
-              <div>
+              <div className="form-group">
+                <label htmlFor="psi">PSI</label>
                 <input
+                  id="psi"
                   type="number"
                   value={psi || ''}
                   onChange={(e) => {
                     const val = parseFloat(e.target.value) || 0;
                     setPsi(val);
-                    setSelectedTank(""); // Reset dropdown on manual edit
+                    setSelectedTank("");
                     handleImperialUpdate(cuft, val, lbs);
                   }}
                   step="1"
                   placeholder="0"
                 />
               </div>
-              <div>
+              <div className="form-group">
+                <label htmlFor="lbs">Weight per tank (lbs)</label>
                 <input
+                  id="lbs"
                   type="number"
                   value={lbs || ''}
                   onChange={(e) => {
                     const val = parseFloat(e.target.value) || 0;
                     setLbs(val);
-                    setSelectedTank(""); // Reset dropdown on manual edit
+                    setSelectedTank("");
                     handleImperialUpdate(cuft, psi, val);
                   }}
                   step="0.1"
                   placeholder="0"
                 />
               </div>
-              <div>
+              <div className="form-group">
+                <label htmlFor="emptyBuoyancyLbs">Empty buoyancy (lbs)</label>
                 <input
+                  id="emptyBuoyancyLbs"
                   type="text"
-                  value={result ? `${result.emptyBuoyancyLbs}/${result.fullBuoyancyLbs}` : '0/0'}
+                  value={result ? result.emptyBuoyancyLbs : '0'}
                   readOnly
-                  className="readonly-input"
+                  disabled
+                  className="buoyancy-result"
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="fullBuoyancyLbs">Full buoyancy (lbs)</label>
+                <input
+                  id="fullBuoyancyLbs"
+                  type="text"
+                  value={result ? result.fullBuoyancyLbs : '0'}
+                  readOnly
+                  disabled
+                  className="buoyancy-result"
                 />
               </div>
             </div>
-
-            <div className="tank-row header">
-              <div>Cuft</div>
-              <div>PSI</div>
-              <div>Weight per tank (lbs)</div>
-              <div>Buoyancy (lbs)</div>
-            </div>
-          </div>
+          )}
 
           <div className="tank-options">
             <label className="tank-option">
@@ -452,7 +506,7 @@ function TankCalculator() {
                 checked={isAluminium}
                 onChange={(e) => setIsAluminium(e.target.checked)}
               />
-              <span>Aluminium</span>
+              <span>Alu</span>
             </label>
             <label className="tank-option">
               <input
@@ -460,7 +514,7 @@ function TankCalculator() {
                 checked={hasValve}
                 onChange={(e) => setHasValve(e.target.checked)}
               />
-              <span>Include Valve (0.8 kg)</span>
+              <span>Include Valve</span>
             </label>
           </div>
         </div>
