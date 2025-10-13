@@ -412,6 +412,172 @@ h1 {
   font-size: 1.1rem;
 }
 
+/* Navigation */
+.navigation {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.nav-btn {
+  padding: 0.75rem 2rem;
+  background: white;
+  color: #667eea;
+  border: 2px solid #667eea;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.nav-btn:hover {
+  background: #f0f0ff;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.nav-btn.active {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-color: transparent;
+}
+
+/* Tank Calculator Styles */
+.predefined-select {
+  width: 100%;
+  padding: 0.75rem;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 1rem;
+  background: white;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.predefined-select:focus {
+  outline: none;
+  border-color: #667eea;
+}
+
+.tank-table {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.tank-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.tank-row.header {
+  font-weight: 600;
+  color: #555;
+  font-size: 0.875rem;
+  text-align: center;
+  padding: 0.5rem 0;
+}
+
+.tank-row.header div {
+  text-align: center;
+}
+
+.tank-row input {
+  padding: 0.75rem;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 1rem;
+  text-align: center;
+  transition: border-color 0.2s;
+  width: 100%;
+}
+
+.tank-row input:focus {
+  outline: none;
+  border-color: #667eea;
+}
+
+.tank-row .readonly-input {
+  background-color: #f8f9fa;
+  cursor: default;
+  border-color: #e0e0e0;
+}
+
+.tank-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  padding: 1rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+  margin-top: 1rem;
+}
+
+.tank-option {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  font-weight: 500;
+  color: #333;
+  user-select: none;
+}
+
+.tank-option input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+}
+
+.calculation-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.calculation-header h2 {
+  margin-bottom: 0;
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.toggle-calc-btn {
+  padding: 0.5rem 1rem;
+  background: white;
+  color: #667eea;
+  border: 2px solid #667eea;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.toggle-calc-btn:hover {
+  background: #f0f0ff;
+}
+
+.calculation-details {
+  padding: 1rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+  line-height: 1.8;
+  color: #333;
+}
+
+.calculation-details b {
+  color: #667eea;
+  font-weight: 600;
+}
+
 /* Mobile optimizations */
 @media (max-width: 640px) {
   .app {
@@ -466,6 +632,45 @@ h1 {
 
   .final-detail .value {
     font-size: 1.25rem;
+  }
+
+  .navigation {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .nav-btn {
+    padding: 0.75rem 1rem;
+    font-size: 0.95rem;
+  }
+
+  .tank-row {
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+  }
+
+  .tank-row.header {
+    font-size: 0.75rem;
+  }
+
+  .tank-row input {
+    padding: 0.5rem;
+    font-size: 0.9rem;
+  }
+
+  .tank-options {
+    gap: 0.5rem;
+    padding: 0.75rem;
+  }
+
+  .tank-option {
+    font-size: 0.875rem;
+  }
+
+  .calculation-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
   }
 }
 

@@ -10,7 +10,7 @@ const DEFAULT_AVAILABLE_GASES: Gas[] = [
   { name: '10/70', o2: 10, he: 70, editable: true },
 ];
 
-function App() {
+function GasBlender() {
   // Starting gas state
   const [startVolume, setStartVolume] = useState<number>(3);
   const [startO2, setStartO2] = useState<number>(14);
@@ -307,4 +307,4 @@ function App() {
   )
 }
 
-export default App
+export default GasBlender
