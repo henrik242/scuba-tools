@@ -24,19 +24,80 @@ function TankCalculator() {
 
     // Check if using metric or imperial from URL
     if (params.has('kg') || params.has('liters') || params.has('bar')) {
-      if (params.has('kg')) setKg(parseFloat(params.get('kg')!) || 0);
-      if (params.has('liters')) setLiters(parseFloat(params.get('liters')!) || 0);
-      if (params.has('bar')) setBar(parseFloat(params.get('bar')!) || 0);
-    } else if (params.has('lbs') || params.has('cuft') || params.has('psi')) {
-      if (params.has('lbs')) setLbs(parseFloat(params.get('lbs')!) || 0);
-      if (params.has('cuft')) setCuft(parseFloat(params.get('cuft')!) || 0);
-      if (params.has('psi')) setPsi(parseFloat(params.get('psi')!) || 0);
-    }
+      const loadedKg = parseFloat(params.get('kg')!) || 0;
+      const loadedLiters = parseFloat(params.get('liters')!) || 0;
+      const loadedBar = parseFloat(params.get('bar')!) || 0;
+      const loadedSalt = params.get('salt') === 'true';
+      const loadedAlu = params.get('alu') === 'true';
+      const loadedValve = params.get('valve') === 'true';
+      const loadedDoubles = params.get('doubles') === 'true';
 
-    if (params.has('salt')) setIsSaltWater(params.get('salt') === 'true');
-    if (params.has('alu')) setIsAluminium(params.get('alu') === 'true');
-    if (params.has('valve')) setHasValve(params.get('valve') === 'true');
-    if (params.has('doubles')) setIsDoubles(params.get('doubles') === 'true');
+      setKg(loadedKg);
+      setLiters(loadedLiters);
+      setBar(loadedBar);
+      setIsSaltWater(loadedSalt);
+      setIsAluminium(loadedAlu);
+      setHasValve(loadedValve);
+      setIsDoubles(loadedDoubles);
+
+      // Perform initial calculation if we have values
+      if (loadedKg > 0 && loadedLiters > 0 && loadedBar > 0) {
+        const input: TankInput = {
+          liters: loadedLiters,
+          bar: loadedBar,
+          kg: loadedKg,
+          cuft: 0,
+          psi: 0,
+          lbs: 0,
+          isAluminium: loadedAlu,
+          isSaltWater: loadedSalt,
+          hasValve: loadedValve,
+          isDoubles: loadedDoubles,
+        };
+        const res = calculateTankMetric(input);
+        setResult(res);
+        setCuft(res.cuft);
+        setPsi(res.psi);
+        setLbs(res.lbs);
+      }
+    } else if (params.has('lbs') || params.has('cuft') || params.has('psi')) {
+      const loadedLbs = parseFloat(params.get('lbs')!) || 0;
+      const loadedCuft = parseFloat(params.get('cuft')!) || 0;
+      const loadedPsi = parseFloat(params.get('psi')!) || 0;
+      const loadedSalt = params.get('salt') === 'true';
+      const loadedAlu = params.get('alu') === 'true';
+      const loadedValve = params.get('valve') === 'true';
+      const loadedDoubles = params.get('doubles') === 'true';
+
+      setLbs(loadedLbs);
+      setCuft(loadedCuft);
+      setPsi(loadedPsi);
+      setIsSaltWater(loadedSalt);
+      setIsAluminium(loadedAlu);
+      setHasValve(loadedValve);
+      setIsDoubles(loadedDoubles);
+
+      // Perform initial calculation if we have values
+      if (loadedLbs > 0 && loadedCuft > 0 && loadedPsi > 0) {
+        const input: TankInput = {
+          liters: 0,
+          bar: 0,
+          kg: 0,
+          cuft: loadedCuft,
+          psi: loadedPsi,
+          lbs: loadedLbs,
+          isAluminium: loadedAlu,
+          isSaltWater: loadedSalt,
+          hasValve: loadedValve,
+          isDoubles: loadedDoubles,
+        };
+        const res = calculateTankImperial(input);
+        setResult(res);
+        setLiters(res.liters);
+        setBar(res.bar);
+        setKg(res.kg);
+      }
+    }
   }, []);
 
   // Update URL whenever state changes (using metric as primary)
@@ -54,6 +115,33 @@ function TankCalculator() {
 
     window.location.hash = params.toString();
   }, [kg, liters, bar, isSaltWater, isAluminium, hasValve, isDoubles]);
+
+  // Recalculate when options change
+  useEffect(() => {
+    if (kg > 0 && liters > 0 && bar > 0) {
+      const input: TankInput = {
+        liters,
+        bar,
+        kg,
+        cuft: 0,
+        psi: 0,
+        lbs: 0,
+        isAluminium,
+        isSaltWater,
+        hasValve,
+        isDoubles,
+      };
+
+      const res = calculateTankMetric(input);
+      setResult(res);
+
+      // Update imperial values
+      setCuft(res.cuft);
+      setPsi(res.psi);
+      setLbs(res.lbs);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAluminium, isSaltWater, hasValve, isDoubles]);
 
   const handleMetricUpdate = (newLiters?: number, newBar?: number, newKg?: number) => {
     const input: TankInput = {
@@ -101,12 +189,6 @@ function TankCalculator() {
     setKg(res.kg);
   };
 
-  const handleOptionsUpdate = () => {
-    if (result) {
-      // Recalculate with current values (use metric as source)
-      handleMetricUpdate();
-    }
-  };
 
   const selectPredefinedTank = (value: string) => {
     if (!value) return;
@@ -152,22 +234,38 @@ function TankCalculator() {
               <option value="metric;10;200;12.6;0;0">10L 200 bar (12.6 kg)</option>
               <option value="metric;12;200;14.0;0;0">12L 200 bar (14.0 kg)</option>
               <option value="metric;15;200;16.5;0;0">15L 200 bar (16.5 kg)</option>
+              <option value="metric;18;200;19.8;0;0">18L 200 bar (19.8 kg)</option>
               <option value="metric;12;232;14.5;0;0">12L 232 bar (14.5 kg)</option>
               <option value="metric;7;300;10.5;0;0">7L 300 bar (10.5 kg)</option>
               <option value="metric;10;300;14.0;0;0">10L 300 bar (14.0 kg)</option>
+              <option value="metric;12;200;28.0;0;1">Twin 12L 200 bar (28.0 kg)</option>
+              <option value="metric;12;232;29.0;0;1">Twin 12L 232 bar (29.0 kg)</option>
             </optgroup>
             <optgroup label="Metric - Aluminium">
               <option value="metric;11.1;207;14.2;1;0">S80 (11.1L 207 bar, 14.2 kg)</option>
               <option value="metric;10.0;207;13.4;1;0">S72 (10.0L 207 bar, 13.4 kg)</option>
             </optgroup>
+            <optgroup label="Metric - Stage/Pony">
+              <option value="metric;3;200;3.8;0;0">3L 200 bar Pony (3.8 kg)</option>
+              <option value="metric;5;200;5.5;0;0">5L 200 bar Stage (5.5 kg)</option>
+              <option value="metric;7;200;7.5;0;0">7L 200 bar Stage (7.5 kg)</option>
+            </optgroup>
             <optgroup label="Imperial - Steel">
+              <option value="imperial;80;3500;28.5;0;0">HP80 (80 cuft, 3500 psi, 28.5 lbs)</option>
               <option value="imperial;85;3442;33;0;0">HP85 (85 cuft, 3442 psi, 33 lbs)</option>
               <option value="imperial;100;3442;38;0;0">HP100 (100 cuft, 3442 psi, 38 lbs)</option>
+              <option value="imperial;117;3442;44;0;0">HP117 (117 cuft, 3442 psi, 44 lbs)</option>
               <option value="imperial;120;3442;43;0;0">HP120 (120 cuft, 3442 psi, 43 lbs)</option>
             </optgroup>
             <optgroup label="Imperial - Aluminium">
-              <option value="imperial;80;3000;31.4;1;0">AL80 (80 cuft, 3000 psi, 31.4 lbs)</option>
               <option value="imperial;63;3000;26;1;0">AL63 (63 cuft, 3000 psi, 26 lbs)</option>
+              <option value="imperial;80;3000;31.4;1;0">AL80 (80 cuft, 3000 psi, 31.4 lbs)</option>
+              <option value="imperial;100;3300;39;1;0">AL100 (100 cuft, 3300 psi, 39 lbs)</option>
+            </optgroup>
+            <optgroup label="Imperial - Stage/Pony">
+              <option value="imperial;19;3000;11;1;0">AL19 Pony (19 cuft, 3000 psi, 11 lbs)</option>
+              <option value="imperial;30;3000;14.5;1;0">AL30 Stage (30 cuft, 3000 psi, 14.5 lbs)</option>
+              <option value="imperial;40;3000;17;1;0">AL40 Stage (40 cuft, 3000 psi, 17 lbs)</option>
             </optgroup>
           </select>
         </div>
@@ -295,10 +393,7 @@ function TankCalculator() {
               <input
                 type="checkbox"
                 checked={isSaltWater}
-                onChange={(e) => {
-                  setIsSaltWater(e.target.checked);
-                  setTimeout(handleOptionsUpdate, 0);
-                }}
+                onChange={(e) => setIsSaltWater(e.target.checked)}
               />
               <span>Salt Water</span>
             </label>
@@ -306,10 +401,7 @@ function TankCalculator() {
               <input
                 type="checkbox"
                 checked={isDoubles}
-                onChange={(e) => {
-                  setIsDoubles(e.target.checked);
-                  setTimeout(handleOptionsUpdate, 0);
-                }}
+                onChange={(e) => setIsDoubles(e.target.checked)}
               />
               <span>Doubles</span>
             </label>
@@ -317,10 +409,7 @@ function TankCalculator() {
               <input
                 type="checkbox"
                 checked={isAluminium}
-                onChange={(e) => {
-                  setIsAluminium(e.target.checked);
-                  setTimeout(handleOptionsUpdate, 0);
-                }}
+                onChange={(e) => setIsAluminium(e.target.checked)}
               />
               <span>Aluminium</span>
             </label>
@@ -328,10 +417,7 @@ function TankCalculator() {
               <input
                 type="checkbox"
                 checked={hasValve}
-                onChange={(e) => {
-                  setHasValve(e.target.checked);
-                  setTimeout(handleOptionsUpdate, 0);
-                }}
+                onChange={(e) => setHasValve(e.target.checked)}
               />
               <span>Include Valve (0.8 kg)</span>
             </label>
@@ -341,12 +427,12 @@ function TankCalculator() {
         {result && (
           <div className="card">
             <div className="calculation-header">
-              <h2>Results</h2>
+              <h2>Calculation</h2>
               <button
                 onClick={() => setShowCalculation(!showCalculation)}
                 className="toggle-calc-btn"
               >
-                {showCalculation ? 'Hide Calculation' : 'Show Calculation'}
+                {showCalculation ? 'Hide' : 'Show'}
               </button>
             </div>
 
