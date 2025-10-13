@@ -33,15 +33,18 @@ function App() {
       <Routes>
         <Route path="blender.html" element={<GasBlender />} />
         <Route path="tanks.html" element={<TankCalculator />} />
-        <Route path="/" element={<Navigate to="blender.html" replace />} />
+        <Route path="*" element={<Navigate to="blender.html" replace />} />
       </Routes>
     </div>
   );
 }
 
 function AppRouter() {
+  // Auto-detect the base path from index.html location
+  const basename = window.location.pathname.replace(/\/[^/]*\.html$/, '') || '/';
+
   return (
-    <BrowserRouter>
+    <BrowserRouter basename={basename}>
       <App />
     </BrowserRouter>
   );
