@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { calculateTankMetric, calculateTankImperial, TankInput, TankResult } from './tankCalculator'
 import './App.css'
 
@@ -17,6 +17,43 @@ function TankCalculator() {
 
   const [result, setResult] = useState<TankResult | null>(null);
   const [showCalculation, setShowCalculation] = useState<boolean>(false);
+
+  // Load state from URL on mount
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.hash.substring(1));
+
+    // Check if using metric or imperial from URL
+    if (params.has('kg') || params.has('liters') || params.has('bar')) {
+      if (params.has('kg')) setKg(parseFloat(params.get('kg')!) || 0);
+      if (params.has('liters')) setLiters(parseFloat(params.get('liters')!) || 0);
+      if (params.has('bar')) setBar(parseFloat(params.get('bar')!) || 0);
+    } else if (params.has('lbs') || params.has('cuft') || params.has('psi')) {
+      if (params.has('lbs')) setLbs(parseFloat(params.get('lbs')!) || 0);
+      if (params.has('cuft')) setCuft(parseFloat(params.get('cuft')!) || 0);
+      if (params.has('psi')) setPsi(parseFloat(params.get('psi')!) || 0);
+    }
+
+    if (params.has('salt')) setIsSaltWater(params.get('salt') === 'true');
+    if (params.has('alu')) setIsAluminium(params.get('alu') === 'true');
+    if (params.has('valve')) setHasValve(params.get('valve') === 'true');
+    if (params.has('doubles')) setIsDoubles(params.get('doubles') === 'true');
+  }, []);
+
+  // Update URL whenever state changes (using metric as primary)
+  useEffect(() => {
+    if (kg === 0 && liters === 0 && bar === 0) return; // Don't update URL if all zeros
+
+    const params = new URLSearchParams();
+    params.set('kg', kg.toString());
+    params.set('liters', liters.toString());
+    params.set('bar', bar.toString());
+    params.set('salt', isSaltWater.toString());
+    params.set('alu', isAluminium.toString());
+    params.set('valve', hasValve.toString());
+    params.set('doubles', isDoubles.toString());
+
+    window.location.hash = params.toString();
+  }, [kg, liters, bar, isSaltWater, isAluminium, hasValve, isDoubles]);
 
   const handleMetricUpdate = (newLiters?: number, newBar?: number, newKg?: number) => {
     const input: TankInput = {
@@ -324,4 +361,3 @@ function TankCalculator() {
 }
 
 export default TankCalculator;
-

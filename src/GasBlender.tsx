@@ -1,12 +1,12 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { calculateBlendingSteps, Gas } from './gasBlender'
 import './App.css'
 
 const DEFAULT_AVAILABLE_GASES: Gas[] = [
   { name: 'Air', o2: 21, he: 0, editable: false },
-  { name: 'Nitrox 32', o2: 32, he: 0, editable: true },
   { name: 'O2', o2: 100, he: 0, editable: false },
   { name: 'Helium', o2: 0, he: 100, editable: false },
+  { name: 'Nitrox 32', o2: 32, he: 0, editable: true },
   { name: '10/70', o2: 10, he: 70, editable: true },
 ];
 
@@ -30,6 +30,33 @@ function GasBlender() {
 
   // Results
   const [blendingSteps, setBlendingSteps] = useState<ReturnType<typeof calculateBlendingSteps> | null>(null);
+
+  // Load state from URL on mount
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.hash.substring(1));
+
+    if (params.has('startVolume')) setStartVolume(parseFloat(params.get('startVolume')!) || 3);
+    if (params.has('startO2')) setStartO2(parseFloat(params.get('startO2')!) || 14);
+    if (params.has('startHe')) setStartHe(parseFloat(params.get('startHe')!) || 67);
+    if (params.has('startPressure')) setStartPressure(parseFloat(params.get('startPressure')!) || 47);
+    if (params.has('targetO2')) setTargetO2(parseFloat(params.get('targetO2')!) || 15);
+    if (params.has('targetHe')) setTargetHe(parseFloat(params.get('targetHe')!) || 55);
+    if (params.has('targetPressure')) setTargetPressure(parseFloat(params.get('targetPressure')!) || 220);
+  }, []);
+
+  // Update URL whenever state changes
+  useEffect(() => {
+    const params = new URLSearchParams();
+    params.set('startVolume', startVolume.toString());
+    params.set('startO2', startO2.toString());
+    params.set('startHe', startHe.toString());
+    params.set('startPressure', startPressure.toString());
+    params.set('targetO2', targetO2.toString());
+    params.set('targetHe', targetHe.toString());
+    params.set('targetPressure', targetPressure.toString());
+
+    window.location.hash = params.toString();
+  }, [startVolume, startO2, startHe, startPressure, targetO2, targetHe, targetPressure]);
 
   const handleCalculate = () => {
     const startingGas = {
