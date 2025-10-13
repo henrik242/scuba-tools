@@ -3,9 +3,9 @@ import { calculateTankMetric, calculateTankImperial, TankInput, TankResult } fro
 import './App.css'
 
 function TankCalculator() {
-  const [liters, setLiters] = useState<number>(0);
-  const [bar, setBar] = useState<number>(0);
-  const [kg, setKg] = useState<number>(0);
+  const [liters, setLiters] = useState<number>(12);
+  const [bar, setBar] = useState<number>(232);
+  const [kg, setKg] = useState<number>(29);
   const [cuft, setCuft] = useState<number>(0);
   const [psi, setPsi] = useState<number>(0);
   const [lbs, setLbs] = useState<number>(0);
@@ -13,10 +13,11 @@ function TankCalculator() {
   const [isAluminium, setIsAluminium] = useState<boolean>(false);
   const [isSaltWater, setIsSaltWater] = useState<boolean>(true);
   const [hasValve, setHasValve] = useState<boolean>(true);
-  const [isDoubles, setIsDoubles] = useState<boolean>(false);
+  const [isDoubles, setIsDoubles] = useState<boolean>(true);
 
   const [result, setResult] = useState<TankResult | null>(null);
   const [showCalculation, setShowCalculation] = useState<boolean>(false);
+  const [selectedTank, setSelectedTank] = useState<string>("metric;12;232;29.0;0;1");
 
   // Load state from URL on mount
   useEffect(() => {
@@ -60,6 +61,13 @@ function TankCalculator() {
         setPsi(res.psi);
         setLbs(res.lbs);
       }
+
+      // Check if the loaded values match the default tank, otherwise clear selection
+      if (loadedLiters === 12 && loadedBar === 232 && loadedKg === 29 && !loadedAlu && loadedDoubles) {
+        // Keep the default selection
+      } else {
+        setSelectedTank(""); // Clear selection when loading different values from URL
+      }
     } else if (params.has('lbs') || params.has('cuft') || params.has('psi')) {
       const loadedLbs = parseFloat(params.get('lbs')!) || 0;
       const loadedCuft = parseFloat(params.get('cuft')!) || 0;
@@ -97,6 +105,28 @@ function TankCalculator() {
         setBar(res.bar);
         setKg(res.kg);
       }
+
+      setSelectedTank(""); // Clear selection when loading from URL
+    } else {
+      // No URL params, perform initial calculation with default Twin 12L 232 bar
+      const input: TankInput = {
+        liters: 12,
+        bar: 232,
+        kg: 29,
+        cuft: 0,
+        psi: 0,
+        lbs: 0,
+        isAluminium: false,
+        isSaltWater: true,
+        hasValve: true,
+        isDoubles: true,
+      };
+      const res = calculateTankMetric(input);
+      setResult(res);
+      setCuft(res.cuft);
+      setPsi(res.psi);
+      setLbs(res.lbs);
+      // Keep selectedTank as "metric;12;232;29.0;0;1" (default state)
     }
   }, []);
 
@@ -139,6 +169,9 @@ function TankCalculator() {
       setCuft(res.cuft);
       setPsi(res.psi);
       setLbs(res.lbs);
+      
+      // Don't update kg - it causes the weight to keep increasing when toggling checkboxes
+      // The calculation internally handles doubles/valve adjustments
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAluminium, isSaltWater, hasValve, isDoubles]);
@@ -193,6 +226,8 @@ function TankCalculator() {
   const selectPredefinedTank = (value: string) => {
     if (!value) return;
 
+    setSelectedTank(value); // Update selected tank state
+
     const [type, ...params] = value.split(';');
 
     if (type === 'metric') {
@@ -227,7 +262,7 @@ function TankCalculator() {
           <select
             className="predefined-select"
             onChange={(e) => selectPredefinedTank(e.target.value)}
-            defaultValue=""
+            value={selectedTank}
           >
             <option value="">Select a tank...</option>
             <optgroup label="Metric - Steel">
@@ -288,6 +323,7 @@ function TankCalculator() {
                   onChange={(e) => {
                     const val = parseFloat(e.target.value) || 0;
                     setLiters(val);
+                    setSelectedTank(""); // Reset dropdown on manual edit
                     handleMetricUpdate(val, bar, kg);
                   }}
                   step="0.1"
@@ -301,6 +337,7 @@ function TankCalculator() {
                   onChange={(e) => {
                     const val = parseFloat(e.target.value) || 0;
                     setBar(val);
+                    setSelectedTank(""); // Reset dropdown on manual edit
                     handleMetricUpdate(liters, val, kg);
                   }}
                   step="1"
@@ -314,6 +351,7 @@ function TankCalculator() {
                   onChange={(e) => {
                     const val = parseFloat(e.target.value) || 0;
                     setKg(val);
+                    setSelectedTank(""); // Reset dropdown on manual edit
                     handleMetricUpdate(liters, bar, val);
                   }}
                   step="0.1"
@@ -338,6 +376,7 @@ function TankCalculator() {
                   onChange={(e) => {
                     const val = parseFloat(e.target.value) || 0;
                     setCuft(val);
+                    setSelectedTank(""); // Reset dropdown on manual edit
                     handleImperialUpdate(val, psi, lbs);
                   }}
                   step="0.1"
@@ -351,6 +390,7 @@ function TankCalculator() {
                   onChange={(e) => {
                     const val = parseFloat(e.target.value) || 0;
                     setPsi(val);
+                    setSelectedTank(""); // Reset dropdown on manual edit
                     handleImperialUpdate(cuft, val, lbs);
                   }}
                   step="1"
@@ -364,6 +404,7 @@ function TankCalculator() {
                   onChange={(e) => {
                     const val = parseFloat(e.target.value) || 0;
                     setLbs(val);
+                    setSelectedTank(""); // Reset dropdown on manual edit
                     handleImperialUpdate(cuft, psi, val);
                   }}
                   step="0.1"
