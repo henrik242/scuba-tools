@@ -174,7 +174,7 @@ function GasBlender() {
               Current Mix: <strong>{startO2}/{startHe}</strong> at <strong>{startPressure} bar</strong>
             </div>
             <button onClick={handleEmpty} className="empty-btn">
-              Empty Tank
+              Reset
             </button>
           </div>
         </div>

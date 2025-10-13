@@ -73,6 +73,12 @@ h1 {
   opacity: 0.6;
 }
 
+.form-group input.buoyancy-result {
+  color: #000;
+  font-weight: 700;
+  opacity: 1;
+}
+
 .mix-display {
   background: #f8f9fa;
   padding: 1rem;
@@ -463,6 +469,39 @@ h1 {
   border-color: #667eea;
 }
 
+.unit-switch {
+  display: flex;
+  gap: 0;
+  border: 2px solid #667eea;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.unit-switch-btn {
+  padding: 0.5rem 1rem;
+  background: white;
+  color: #667eea;
+  border: none;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  border-right: 2px solid #667eea;
+}
+
+.unit-switch-btn:last-child {
+  border-right: none;
+}
+
+.unit-switch-btn:hover {
+  background: #f0f0ff;
+}
+
+.unit-switch-btn.active {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
 .tank-table {
   display: flex;
   flex-direction: column;
@@ -645,17 +684,17 @@ h1 {
   }
 
   .tank-row {
-    grid-template-columns: 1fr 1fr;
-    gap: 0.5rem;
+    gap: 0.25rem;
   }
 
   .tank-row.header {
-    font-size: 0.75rem;
+    font-size: 0.65rem;
+    padding: 0.25rem 0;
   }
 
   .tank-row input {
-    padding: 0.5rem;
-    font-size: 0.9rem;
+    padding: 0.4rem 0.2rem;
+    font-size: 0.85rem;
   }
 
   .tank-options {
