@@ -46,6 +46,16 @@ export interface BlendingResult {
   error?: string;
 }
 
+const roundTo = (value: number, decimals = 2): number => {
+  const factor = 10 ** decimals;
+  return Math.round(value * factor) / factor;
+};
+
+const toPercentLabel = (fraction: number): number => roundTo(fraction * 100, 1);
+
+const createMixLabel = (o2Fraction: number, heFraction: number): string =>
+  `${toPercentLabel(o2Fraction)}/${toPercentLabel(heFraction)}`;
+
 /**
  * Calculate required gas additions using proper partial pressure math
  * Order: 1) Drain (if needed), 2) Add Helium, 3) Add O2, 4) Add Air/Nitrox last
@@ -67,12 +77,6 @@ export function calculateBlendingSteps(
     };
   }
 
-  // Current state
-  let currentPressure = startingGas.pressure;
-  let currentO2Fraction = startingGas.o2 / 100;
-  let currentHeFraction = startingGas.he / 100;
-  let currentN2Fraction = 1 - currentO2Fraction - currentHeFraction;
-
   // Target state
   const targetPressure = targetGas.pressure;
   const targetO2Fraction = targetGas.o2 / 100;
@@ -84,84 +88,140 @@ export function calculateBlendingSteps(
   const targetHePP = targetHeFraction * targetPressure;
   const targetN2PP = targetN2Fraction * targetPressure;
 
-  // Calculate current partial pressures
-  let currentO2PP = currentO2Fraction * currentPressure;
-  let currentHePP = currentHeFraction * currentPressure;
-  let currentN2PP = currentN2Fraction * currentPressure;
+  // Current state represented by partial pressures
+  let currentPressure = startingGas.pressure;
+  let currentO2PP = (startingGas.o2 / 100) * currentPressure;
+  let currentHePP = (startingGas.he / 100) * currentPressure;
+  let currentN2PP = Math.max(0, currentPressure - currentO2PP - currentHePP);
 
-  // Calculate needed additions (delta partial pressures)
-  let deltaHe = targetHePP - currentHePP;
-  let deltaN2 = targetN2PP - currentN2PP;
-  let deltaO2 = targetO2PP - currentO2PP;
+  let deltaHe = 0;
+  let deltaN2 = 0;
+  let deltaO2 = 0;
+
+  const getFractions = () => {
+    if (currentPressure <= 0.0001) {
+      return {o2: 0, he: 0, n2: 0};
+    }
+
+    const o2 = currentO2PP / currentPressure;
+    const he = currentHePP / currentPressure;
+    const n2 = Math.max(0, 1 - o2 - he);
+
+    return {o2, he, n2};
+  };
+
+  const updateDeltas = () => {
+    deltaHe = targetHePP - currentHePP;
+    deltaN2 = targetN2PP - currentN2PP;
+    deltaO2 = targetO2PP - currentO2PP;
+  };
+
+  const recordDrain = (toPressure: number, forceComplete = false) => {
+    if (currentPressure <= toPressure) {
+      return;
+    }
+
+    const previousPressure = currentPressure;
+    const previousFractions = getFractions();
+    const newPressure = forceComplete ? 0 : toPressure;
+    const ratio = previousPressure > 0 ? newPressure / previousPressure : 0;
+
+    currentPressure = newPressure;
+    currentO2PP *= ratio;
+    currentHePP *= ratio;
+    currentN2PP *= ratio;
+
+    const updatedFractions = getFractions();
+
+    steps.push({
+      action: forceComplete ? 'Drain tank completely' : `Drain to ${roundTo(newPressure, 2)} bar`,
+      fromPressure: roundTo(previousPressure, 2),
+      toPressure: roundTo(newPressure, 2),
+      drainedPressure: roundTo(previousPressure - newPressure, 2),
+      currentMix: createMixLabel(previousFractions.o2, previousFractions.he),
+      newMix: createMixLabel(updatedFractions.o2, updatedFractions.he)
+    });
+
+    updateDeltas();
+  };
+
+  const recordGasAddition = (gas: Gas, amount: number, label: string, decimals = 1) => {
+    const roundedAmount = roundTo(amount, decimals);
+
+    if (roundedAmount <= 0) {
+      return;
+    }
+
+    const previousPressure = currentPressure;
+    const previousFractions = getFractions();
+
+    const inertPercent = Math.max(0, 100 - gas.o2 - gas.he);
+    const o2Added = (gas.o2 / 100) * roundedAmount;
+    const heAdded = (gas.he / 100) * roundedAmount;
+    const n2Added = (inertPercent / 100) * roundedAmount;
+
+    currentO2PP += o2Added;
+    currentHePP += heAdded;
+    currentN2PP += n2Added;
+    currentPressure += roundedAmount;
+
+    currentN2PP = Math.max(0, currentN2PP);
+
+    const updatedFractions = getFractions();
+
+    steps.push({
+      action: label,
+      gas: gas.name,
+      fromPressure: roundTo(previousPressure, 2),
+      toPressure: roundTo(currentPressure, 2),
+      addedPressure: roundedAmount,
+      currentMix: createMixLabel(previousFractions.o2, previousFractions.he),
+      newMix: createMixLabel(updatedFractions.o2, updatedFractions.he)
+    });
+
+    updateDeltas();
+  };
+
+  updateDeltas();
 
   // STEP 0: Check if we need to drain (ALWAYS FIRST STEP if needed)
   if (deltaHe < -0.5 || deltaN2 < -0.5 || deltaO2 < -0.5) {
     let drainToPressure = currentPressure;
     let canPartialDrain = true;
+    const fractions = getFractions();
 
     if (deltaHe < -0.5) {
-      if (currentHeFraction > 0.001) {
-        const maxPressureForHe = targetHePP / currentHeFraction;
+      if (fractions.he > 0.001) {
+        const maxPressureForHe = targetHePP / fractions.he;
         drainToPressure = Math.min(drainToPressure, maxPressureForHe);
       } else {
         canPartialDrain = false;
       }
     }
     if (deltaO2 < -0.5) {
-      if (currentO2Fraction > 0.001) {
-        const maxPressureForO2 = targetO2PP / currentO2Fraction;
+      if (fractions.o2 > 0.001) {
+        const maxPressureForO2 = targetO2PP / fractions.o2;
         drainToPressure = Math.min(drainToPressure, maxPressureForO2);
       } else {
         canPartialDrain = false;
       }
     }
     if (deltaN2 < -0.5) {
-      if (currentN2Fraction > 0.001) {
-        const maxPressureForN2 = targetN2PP / currentN2Fraction;
+      if (fractions.n2 > 0.001) {
+        const maxPressureForN2 = targetN2PP / fractions.n2;
         drainToPressure = Math.min(drainToPressure, maxPressureForN2);
       } else {
         canPartialDrain = false;
       }
     }
 
-    drainToPressure = Math.max(0, Math.round(drainToPressure * 100) / 100);
-    const drainAmount = currentPressure - drainToPressure;
+    const targetDrainPressure = roundTo(Math.max(0, drainToPressure), 2);
+    const drainedAmount = currentPressure - targetDrainPressure;
 
-    if (drainAmount > 0.5 && canPartialDrain && drainToPressure > 0) {
-      steps.push({
-        action: `Drain to ${drainToPressure} bar`,
-        fromPressure: currentPressure,
-        toPressure: drainToPressure,
-        drainedPressure: drainAmount,
-        currentMix: `${Math.round(startingGas.o2 * 10) / 10}/${Math.round(startingGas.he * 10) / 10}`,
-        newMix: `${Math.round(currentO2Fraction * 1000) / 10}/${Math.round(currentHeFraction * 1000) / 10}`
-      });
-
-      currentPressure = drainToPressure;
-      currentO2PP = currentO2Fraction * currentPressure;
-      currentHePP = currentHeFraction * currentPressure;
-      currentN2PP = currentN2Fraction * currentPressure;
-
-      deltaHe = targetHePP - currentHePP;
-      deltaN2 = targetN2PP - currentN2PP;
-      deltaO2 = targetO2PP - currentO2PP;
-    } else if (!canPartialDrain || drainAmount >= currentPressure - 0.5) {
-      steps.push({
-        action: 'Drain tank completely',
-        fromPressure: currentPressure,
-        toPressure: 0,
-        drainedPressure: currentPressure,
-        currentMix: `${Math.round(startingGas.o2 * 10) / 10}/${Math.round(startingGas.he * 10) / 10}`,
-        newMix: '0/0'
-      });
-
-      currentPressure = 0;
-      currentO2PP = 0;
-      currentHePP = 0;
-      currentN2PP = 0;
-      deltaHe = targetHePP;
-      deltaN2 = targetN2PP;
-      deltaO2 = targetO2PP;
+    if (drainedAmount > 0.5 && canPartialDrain && targetDrainPressure > 0) {
+      recordDrain(targetDrainPressure);
+    } else if (!canPartialDrain || drainedAmount >= currentPressure - 0.5) {
+      recordDrain(0, true);
     }
   }
 
@@ -175,41 +235,10 @@ export function calculateBlendingSteps(
   if (deltaHe > 0.1) {
     const heGas = pureHe || trimixGases[0];
 
-    if (heGas) {
-      const heToAdd = Math.round((deltaHe / (heGas.he / 100)) * 100) / 100;
-
-      const prevPressure = currentPressure;
-      const prevO2Fraction = currentO2Fraction;
-      const prevHeFraction = currentHeFraction;
-
-      const o2Added = (heGas.o2 / 100) * heToAdd;
-      const heAdded = (heGas.he / 100) * heToAdd;
-      const n2Added = ((100 - heGas.o2 - heGas.he) / 100) * heToAdd;
-
-      currentO2PP += o2Added;
-      currentHePP += heAdded;
-      currentN2PP += n2Added;
-      currentPressure += heToAdd;
-
-      const newO2Fraction = currentO2PP / currentPressure;
-      const newHeFraction = currentHePP / currentPressure;
-
-      steps.push({
-        action: `Add ${heGas.name}`,
-        gas: heGas.name,
-        fromPressure: Math.round(prevPressure * 100) / 100,
-        toPressure: Math.round(currentPressure * 100) / 100,
-        addedPressure: heToAdd,
-        currentMix: `${Math.round(prevO2Fraction * 1000) / 10}/${Math.round(prevHeFraction * 1000) / 10}`,
-        newMix: `${Math.round(newO2Fraction * 1000) / 10}/${Math.round(newHeFraction * 1000) / 10}`
-      });
-
-      currentO2Fraction = newO2Fraction;
-      currentHeFraction = newHeFraction;
-      currentN2Fraction = 1 - currentO2Fraction - currentHeFraction;
-
-      deltaN2 = targetN2PP - currentN2PP;
-      deltaO2 = targetO2PP - currentO2PP;
+    if (heGas && heGas.he > 0) {
+      const heFraction = heGas.he / 100;
+      const heToAdd = deltaHe / heFraction;
+      recordGasAddition(heGas, heToAdd, `Add ${heGas.name}`, 2);
     }
   }
 
@@ -220,34 +249,10 @@ export function calculateBlendingSteps(
   if (remainingPressure > 0.1) {
     // Special case: If we only have pure O2 available, just add it
     if (pureO2 && airGases.length === 0) {
-      const o2ToAdd = Math.round(remainingPressure * 10) / 10;
+      const o2ToAdd = roundTo(remainingPressure, 1);
 
       if (o2ToAdd > 0.1) {
-        const prevPressure = currentPressure;
-        const prevO2Fraction = currentO2Fraction;
-        const prevHeFraction = currentHeFraction;
-
-        currentO2PP += (pureO2.o2 / 100) * o2ToAdd;
-        currentHePP += (pureO2.he / 100) * o2ToAdd;
-        currentN2PP += ((100 - pureO2.o2 - pureO2.he) / 100) * o2ToAdd;
-        currentPressure += o2ToAdd;
-
-        const newO2Fraction = currentO2PP / currentPressure;
-        const newHeFraction = currentHePP / currentPressure;
-
-        steps.push({
-          action: `Add ${pureO2.name}`,
-          gas: pureO2.name,
-          fromPressure: Math.round(prevPressure * 10) / 10,
-          toPressure: Math.round(currentPressure * 10) / 10,
-          addedPressure: o2ToAdd,
-          currentMix: `${Math.round(prevO2Fraction * 100 * 10) / 10}/${Math.round(prevHeFraction * 100 * 10) / 10}`,
-          newMix: `${Math.round(newO2Fraction * 100 * 10) / 10}/${Math.round(newHeFraction * 100 * 10) / 10}`
-        });
-
-        currentO2Fraction = newO2Fraction;
-        currentHeFraction = newHeFraction;
-        currentN2Fraction = 1 - currentO2Fraction - currentHeFraction;
+        recordGasAddition(pureO2, o2ToAdd, `Add ${pureO2.name}`);
       }
     } else if (airGases.length > 0) {
       // Find the best air/nitrox gas to get closest to target mix
@@ -329,60 +334,12 @@ export function calculateBlendingSteps(
 
         // Add O2 first if needed
         if (o2Pressure > 0.1) {
-          const prevPressure = currentPressure;
-          const prevO2Fraction = currentO2Fraction;
-          const prevHeFraction = currentHeFraction;
-
-          currentO2PP += (pureO2.o2 / 100) * o2Pressure;
-          currentHePP += (pureO2.he / 100) * o2Pressure;
-          currentN2PP += ((100 - pureO2.o2 - pureO2.he) / 100) * o2Pressure;
-          currentPressure += o2Pressure;
-
-          const newO2Fraction = currentO2PP / currentPressure;
-          const newHeFraction = currentHePP / currentPressure;
-
-          steps.push({
-            action: `Add ${pureO2.name}`,
-            gas: pureO2.name,
-            fromPressure: Math.round(prevPressure * 10) / 10,
-            toPressure: Math.round(currentPressure * 10) / 10,
-            addedPressure: o2Pressure,
-            currentMix: `${Math.round(prevO2Fraction * 100 * 10) / 10}/${Math.round(prevHeFraction * 100 * 10) / 10}`,
-            newMix: `${Math.round(newO2Fraction * 100 * 10) / 10}/${Math.round(newHeFraction * 100 * 10) / 10}`
-          });
-
-          currentO2Fraction = newO2Fraction;
-          currentHeFraction = newHeFraction;
-          currentN2Fraction = 1 - currentO2Fraction - currentHeFraction;
+          recordGasAddition(pureO2, o2Pressure, `Add ${pureO2.name}`);
         }
 
         // Then add air/nitrox
         if (airPressure > 0.1) {
-          const prevPressure = currentPressure;
-          const prevO2Fraction = currentO2Fraction;
-          const prevHeFraction = currentHeFraction;
-
-          currentO2PP += (bestAirGas.o2 / 100) * airPressure;
-          currentHePP += (bestAirGas.he / 100) * airPressure;
-          currentN2PP += ((100 - bestAirGas.o2 - bestAirGas.he) / 100) * airPressure;
-          currentPressure += airPressure;
-
-          const newO2Fraction = currentO2PP / currentPressure;
-          const newHeFraction = currentHePP / currentPressure;
-
-          steps.push({
-            action: `Top up with ${bestAirGas.name}`,
-            gas: bestAirGas.name,
-            fromPressure: Math.round(prevPressure * 10) / 10,
-            toPressure: Math.round(currentPressure * 10) / 10,
-            addedPressure: airPressure,
-            currentMix: `${Math.round(prevO2Fraction * 100 * 10) / 10}/${Math.round(prevHeFraction * 100 * 10) / 10}`,
-            newMix: `${Math.round(newO2Fraction * 100 * 10) / 10}/${Math.round(newHeFraction * 100 * 10) / 10}`
-          });
-
-          currentO2Fraction = newO2Fraction;
-          currentHeFraction = newHeFraction;
-          currentN2Fraction = 1 - currentO2Fraction - currentHeFraction;
+          recordGasAddition(bestAirGas, airPressure, `Top up with ${bestAirGas.name}`);
         }
       } else {
         // Original algorithm for cases without precise two-gas solution
@@ -395,72 +352,27 @@ export function calculateBlendingSteps(
 
         // STEP 2a: Add pure O2 ONLY if we still need more O2 after accounting for air
         if (deltaO2 > 0.1 && pureO2) {
-          const o2ToAdd = Math.round(deltaO2 * 10) / 10;
+          const o2ToAdd = roundTo(deltaO2, 1);
 
-          const prevPressure = currentPressure;
-          const prevO2Fraction = currentO2Fraction;
-          const prevHeFraction = currentHeFraction;
-
-          currentO2PP += o2ToAdd;
-          currentPressure += o2ToAdd;
-
-          const newO2Fraction = currentO2PP / currentPressure;
-          const newHeFraction = currentHePP / currentPressure;
-
-          steps.push({
-            action: `Add ${pureO2.name}`,
-            gas: pureO2.name,
-            fromPressure: Math.round(prevPressure * 10) / 10,
-            toPressure: Math.round(currentPressure * 10) / 10,
-            addedPressure: o2ToAdd,
-            currentMix: `${Math.round(prevO2Fraction * 100 * 10) / 10}/${Math.round(prevHeFraction * 100 * 10) / 10}`,
-            newMix: `${Math.round(newO2Fraction * 100 * 10) / 10}/${Math.round(newHeFraction * 100 * 10) / 10}`
-          });
-
-          currentO2Fraction = newO2Fraction;
-          currentHeFraction = newHeFraction;
-          currentN2Fraction = 1 - currentO2Fraction - currentHeFraction;
+          recordGasAddition(pureO2, o2ToAdd, `Add ${pureO2.name}`);
         }
 
         // STEP 3: Now add air/nitrox to reach target pressure (ALWAYS LAST)
-        const finalRemainingPressure = Math.round((targetPressure - currentPressure) * 10) / 10;
+        const finalRemainingPressure = roundTo(targetPressure - currentPressure, 1);
 
         if (finalRemainingPressure > 0.1) {
-          const prevPressure = currentPressure;
-          const prevO2Fraction = currentO2Fraction;
-          const prevHeFraction = currentHeFraction;
-
-          currentO2PP += (bestAirGas.o2 / 100) * finalRemainingPressure;
-          currentHePP += (bestAirGas.he / 100) * finalRemainingPressure;
-          currentN2PP += ((100 - bestAirGas.o2 - bestAirGas.he) / 100) * finalRemainingPressure;
-          currentPressure += finalRemainingPressure;
-
-          const newO2Fraction = currentO2PP / currentPressure;
-          const newHeFraction = currentHePP / currentPressure;
-
-          steps.push({
-            action: `Top up with ${bestAirGas.name}`,
-            gas: bestAirGas.name,
-            fromPressure: Math.round(prevPressure * 10) / 10,
-            toPressure: Math.round(currentPressure * 10) / 10,
-            addedPressure: finalRemainingPressure,
-            currentMix: `${Math.round(prevO2Fraction * 100 * 10) / 10}/${Math.round(prevHeFraction * 100 * 10) / 10}`,
-            newMix: `${Math.round(newO2Fraction * 100 * 10) / 10}/${Math.round(newHeFraction * 100 * 10) / 10}`
-          });
-
-          currentO2Fraction = newO2Fraction;
-          currentHeFraction = newHeFraction;
-          currentN2Fraction = 1 - currentO2Fraction - currentHeFraction;
+          recordGasAddition(bestAirGas, finalRemainingPressure, `Top up with ${bestAirGas.name}`);
         }
       }
     }
   }
 
   // Calculate final mix
+  const finalFractions = getFractions();
   const finalMix = {
-    o2: Math.round(currentO2Fraction * 1000) / 10,
-    he: Math.round(currentHeFraction * 1000) / 10,
-    pressure: Math.round(currentPressure * 10) / 10
+    o2: toPercentLabel(finalFractions.o2),
+    he: toPercentLabel(finalFractions.he),
+    pressure: roundTo(currentPressure, 1)
   };
 
   // Check if we're close enough to target (more lenient tolerance)
