@@ -38,6 +38,16 @@
   }
 }
 
+.gas-blender-app .container {
+  max-width: 1024px;
+}
+
+@media (min-width: 1200px) {
+  .gas-blender-app .container {
+    max-width: 1340px;
+  }
+}
+
 h1 {
   color: white;
   text-align: center;
@@ -663,47 +673,11 @@ h1 {
   color: #5c6689;
 }
 
-.tank-icon {
-  width: 56px;
-  height: 140px;
+.tank-illustration {
+  width: 120px;
+  max-width: 100%;
+  height: auto;
   flex-shrink: 0;
-}
-
-.tank-shell {
-  fill: rgba(255, 255, 255, 0.88);
-}
-
-.tank-outline {
-  stroke: #aeb7d6;
-  stroke-width: 3;
-}
-
-.tank-valve {
-  fill: #6b7797;
-}
-
-.tank-neck {
-  fill: #bbc5e2;
-}
-
-.tank-knob {
-  fill: #4c5a84;
-}
-
-.tank-shadow {
-  fill: rgba(56, 71, 124, 0.18);
-}
-
-.tank-icon .tank-fill {
-  transition: fill 0.2s ease;
-}
-
-.tank-icon.tank-full .tank-fill {
-  fill: rgba(70, 201, 197, 0.9);
-}
-
-.tank-icon.tank-empty .tank-fill {
-  fill: rgba(164, 175, 206, 0.45);
 }
 
 .calculation-header {
