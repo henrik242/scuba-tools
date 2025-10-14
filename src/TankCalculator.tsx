@@ -7,27 +7,10 @@ import {
 } from "./tankCalculator";
 import "./App.css";
 
-const TankSvg = ({ variant }: { variant: "full" | "empty" }) => {
-  const fillHeight = variant === "full" ? 96 : 32;
-  const fillY = 36 + (96 - fillHeight);
-
-  return (
-    <svg
-      viewBox="0 0 64 160"
-      className={`tank-icon tank-${variant}`}
-      role="img"
-      aria-hidden="true"
-    >
-      <rect className="tank-shadow" x="24" y="132" width="16" height="12" rx="6" />
-      <rect className="tank-fill" x="20" y={fillY} width="24" height={fillHeight} rx="12" />
-      <rect className="tank-shell" x="20" y="32" width="24" height="104" rx="12" />
-      <rect className="tank-outline" x="20" y="32" width="24" height="104" rx="12" fill="none" />
-      <rect className="tank-neck" x="24" y="20" width="16" height="18" rx="4" />
-      <rect className="tank-valve" x="22" y="12" width="20" height="10" rx="3" />
-      <circle className="tank-knob" cx="32" cy="8" r="6" />
-    </svg>
-  );
-};
+const tankIllustrations = {
+  full: "/tanks-full.svg",
+  empty: "/tanks-empty.svg"
+} as const;
 
 function TankCalculator() {
   const [liters, setLiters] = useState<number>(12);
@@ -612,7 +595,12 @@ function TankCalculator() {
               <h3>Buoyancy Snapshot</h3>
               <div className="buoyancy-panels">
                 <div className="buoyancy-panel">
-                  <TankSvg variant="full" />
+                  <img
+                    src={tankIllustrations.full}
+                    className="tank-illustration"
+                    alt=""
+                    aria-hidden="true"
+                  />
                   <div className="buoyancy-details">
                     <span className="buoyancy-label">Full Tank</span>
                     <span className="buoyancy-value">
@@ -622,7 +610,12 @@ function TankCalculator() {
                   </div>
                 </div>
                 <div className="buoyancy-panel">
-                  <TankSvg variant="empty" />
+                  <img
+                    src={tankIllustrations.empty}
+                    className="tank-illustration"
+                    alt=""
+                    aria-hidden="true"
+                  />
                   <div className="buoyancy-details">
                     <span className="buoyancy-label">Empty Tank</span>
                     <span className="buoyancy-value">

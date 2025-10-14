@@ -255,7 +255,7 @@ function GasBlender() {
   };
 
   return (
-    <div className="app">
+    <div className="app gas-blender-app">
       <div className="container">
         <h1>
           <img

@@ -116,8 +116,8 @@ export function calculateTankMetric(input: TankInput): TankResult {
 
   txt += `Total weight in water: (${liters} + ${toDec(volMetal, true)}${plusValve}) x ${water} = <b>${toDec(volume, true)} kg</b><br>`;
   txt += `Air has a density of ${AIR_DENSITY} kg/liter. <br>The air in a full tank weighs ${AIR_DENSITY} x ${liters} liters x ${bar} bar = <b>${toDec(air, true)} kg</b><br>`;
-  txt += `Tank buoyancy when empty: ${toDec(volume, true)} - ${kg}${minusValve} = <b>${toDec(empty)} kg</b><br>`;
-  txt += `Tank buoyancy when full: ${toDec(volume, true)} - ${kg}${minusValve} - ${toDec(air, true)} = <b>${toDec(full)} kg</b><br>`;
+  txt += `<i>Tank buoyancy when empty: ${toDec(volume, true)} - ${kg}${minusValve} = <b>${toDec(empty)} kg</b></i><br>`;
+  txt += `<i>Tank buoyancy when full: ${toDec(volume, true)} - ${kg}${minusValve} - ${toDec(air, true)} = <b>${toDec(full)} kg</b></i><br>`;
 
   return {
     liters: toDec(liters),
