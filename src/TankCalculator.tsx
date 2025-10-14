@@ -7,6 +7,28 @@ import {
 } from "./tankCalculator";
 import "./App.css";
 
+const TankSvg = ({ variant }: { variant: "full" | "empty" }) => {
+  const fillHeight = variant === "full" ? 96 : 32;
+  const fillY = 36 + (96 - fillHeight);
+
+  return (
+    <svg
+      viewBox="0 0 64 160"
+      className={`tank-icon tank-${variant}`}
+      role="img"
+      aria-hidden="true"
+    >
+      <rect className="tank-shadow" x="24" y="132" width="16" height="12" rx="6" />
+      <rect className="tank-fill" x="20" y={fillY} width="24" height={fillHeight} rx="12" />
+      <rect className="tank-shell" x="20" y="32" width="24" height="104" rx="12" />
+      <rect className="tank-outline" x="20" y="32" width="24" height="104" rx="12" fill="none" />
+      <rect className="tank-neck" x="24" y="20" width="16" height="18" rx="4" />
+      <rect className="tank-valve" x="22" y="12" width="20" height="10" rx="3" />
+      <circle className="tank-knob" cx="32" cy="8" r="6" />
+    </svg>
+  );
+};
+
 function TankCalculator() {
   const [liters, setLiters] = useState<number>(12);
   const [bar, setBar] = useState<number>(232);
@@ -26,6 +48,11 @@ function TankCalculator() {
   const [selectedTank, setSelectedTank] = useState<string>(
     "metric;12;232;14.5;0;1",
   );
+
+  const formatBuoyancy = (kgValue: number, lbsValue: number) =>
+    useMetric
+      ? `${kgValue.toFixed(1)} kg (${lbsValue.toFixed(1)} lbs)`
+      : `${lbsValue.toFixed(1)} lbs (${kgValue.toFixed(1)} kg)`;
 
   // Load state from URL on mount
   useEffect(() => {
@@ -491,28 +518,6 @@ function TankCalculator() {
                   placeholder="0"
                 />
               </div>
-              <div className="form-group">
-                <label htmlFor="emptyBuoyancyKg">Empty buoyancy (kg)</label>
-                <input
-                  id="emptyBuoyancyKg"
-                  type="text"
-                  value={result ? result.emptyBuoyancyKg : "0"}
-                  readOnly
-                  disabled
-                  className="buoyancy-result"
-                />
-              </div>
-              <div className="form-group">
-                <label htmlFor="fullBuoyancyKg">Full buoyancy (kg)</label>
-                <input
-                  id="fullBuoyancyKg"
-                  type="text"
-                  value={result ? result.fullBuoyancyKg : "0"}
-                  readOnly
-                  disabled
-                  className="buoyancy-result"
-                />
-              </div>
             </div>
           ) : (
             <div className="form-grid">
@@ -564,28 +569,6 @@ function TankCalculator() {
                   placeholder="0"
                 />
               </div>
-              <div className="form-group">
-                <label htmlFor="emptyBuoyancyLbs">Empty buoyancy (lbs)</label>
-                <input
-                  id="emptyBuoyancyLbs"
-                  type="text"
-                  value={result ? result.emptyBuoyancyLbs : "0"}
-                  readOnly
-                  disabled
-                  className="buoyancy-result"
-                />
-              </div>
-              <div className="form-group">
-                <label htmlFor="fullBuoyancyLbs">Full buoyancy (lbs)</label>
-                <input
-                  id="fullBuoyancyLbs"
-                  type="text"
-                  value={result ? result.fullBuoyancyLbs : "0"}
-                  readOnly
-                  disabled
-                  className="buoyancy-result"
-                />
-              </div>
             </div>
           )}
 
@@ -623,6 +606,34 @@ function TankCalculator() {
               <span>Include Valve</span>
             </label>
           </div>
+
+          {result && (
+            <div className="buoyancy-card">
+              <h3>Buoyancy Snapshot</h3>
+              <div className="buoyancy-panels">
+                <div className="buoyancy-panel">
+                  <TankSvg variant="full" />
+                  <div className="buoyancy-details">
+                    <span className="buoyancy-label">Full Tank</span>
+                    <span className="buoyancy-value">
+                      {formatBuoyancy(result.fullBuoyancyKg, result.fullBuoyancyLbs)}
+                    </span>
+                    <span className="buoyancy-subtext">Includes breathing gas weight</span>
+                  </div>
+                </div>
+                <div className="buoyancy-panel">
+                  <TankSvg variant="empty" />
+                  <div className="buoyancy-details">
+                    <span className="buoyancy-label">Empty Tank</span>
+                    <span className="buoyancy-value">
+                      {formatBuoyancy(result.emptyBuoyancyKg, result.emptyBuoyancyLbs)}
+                    </span>
+                    <span className="buoyancy-subtext">After the dive when gas is spent</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {result && (

@@ -605,6 +605,107 @@ h1 {
   cursor: pointer;
 }
 
+.buoyancy-card {
+  margin-top: 1.5rem;
+  padding: 1.5rem;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #edf2ff 0%, #f4f0ff 100%);
+  border: 1px solid #d7dff7;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+.buoyancy-card h3 {
+  margin: 0 0 1rem 0;
+  color: #38447c;
+  text-transform: uppercase;
+  font-size: 0.9rem;
+  letter-spacing: 0.08em;
+}
+
+.buoyancy-panels {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1rem;
+}
+
+.buoyancy-panel {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  border: 1px solid rgba(221, 228, 255, 0.9);
+  box-shadow: 0 6px 16px rgba(56, 71, 124, 0.12);
+  backdrop-filter: blur(4px);
+}
+
+.buoyancy-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.buoyancy-label {
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: #38447c;
+}
+
+.buoyancy-value {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #222;
+}
+
+.buoyancy-subtext {
+  font-size: 0.85rem;
+  color: #5c6689;
+}
+
+.tank-icon {
+  width: 56px;
+  height: 140px;
+  flex-shrink: 0;
+}
+
+.tank-shell {
+  fill: rgba(255, 255, 255, 0.88);
+}
+
+.tank-outline {
+  stroke: #aeb7d6;
+  stroke-width: 3;
+}
+
+.tank-valve {
+  fill: #6b7797;
+}
+
+.tank-neck {
+  fill: #bbc5e2;
+}
+
+.tank-knob {
+  fill: #4c5a84;
+}
+
+.tank-shadow {
+  fill: rgba(56, 71, 124, 0.18);
+}
+
+.tank-icon .tank-fill {
+  transition: fill 0.2s ease;
+}
+
+.tank-icon.tank-full .tank-fill {
+  fill: rgba(70, 201, 197, 0.9);
+}
+
+.tank-icon.tank-empty .tank-fill {
+  fill: rgba(164, 175, 206, 0.45);
+}
+
 .calculation-header {
   display: flex;
   justify-content: space-between;
