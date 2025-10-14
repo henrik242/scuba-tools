@@ -93,7 +93,11 @@ function GasBlender() {
       const updatedGas = { ...newGases[index], [field]: parseFloat(value.toString()) };
       // Update the name to match the O2/He values if it's an editable gas
       if (updatedGas.editable) {
-        updatedGas.name = `${updatedGas.o2}/${updatedGas.he}`;
+        if (updatedGas.he === 0 && updatedGas.o2 > 21 && updatedGas.o2 < 41) {
+          updatedGas.name = `Nitrox ${updatedGas.o2}`;
+        } else {
+          updatedGas.name = `${updatedGas.o2}/${updatedGas.he}`;
+        }
       }
       newGases[index] = updatedGas;
     }
