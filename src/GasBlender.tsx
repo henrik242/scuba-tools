@@ -167,35 +167,25 @@ function GasBlender() {
   };
 
   const addCustomGas = () => {
-    let o2 = 21;
-    let he = 0;
-    let attempts = 0;
+    let newGas: Gas | null = null;
 
-    while (gasExists(o2, he) && attempts < 200) {
-      if (he < 100 - o2) {
-        he += 1;
-      } else if (o2 < 100) {
-        o2 += 1;
-        he = 0;
+    outer: for (let o2 = 0; o2 <= 100; o2 += 1) {
+      for (let he = 0; he <= 100 - o2; he += 1) {
+        if (!gasExists(o2, he)) {
+          const name = he === 0 && o2 > 21 && o2 < 41 ? `Nitrox ${o2}` : `${o2}/${he}`;
+          newGas = { name, o2, he, editable: true };
+          break outer;
+        }
       }
-      attempts += 1;
     }
 
-    if (gasExists(o2, he)) {
+    if (!newGas) {
       setGasError("Unable to create a unique custom gas mix.");
       return;
     }
 
-    const name = he === 0 && o2 > 21 && o2 < 41 ? `Nitrox ${o2}` : `${o2}/${he}`;
-    const newGas: Gas = {
-      name,
-      o2,
-      he,
-      editable: true,
-    };
-
-    setAvailableGases((prev) => [...prev, newGas]);
-    setSelectedGases((prev) => ({ ...prev, [newGas.name]: true }));
+  setAvailableGases((prev) => [...prev, newGas]);
+  setSelectedGases((prev) => ({ ...prev, [newGas.name]: true }));
     setGasError(null);
   };
 
