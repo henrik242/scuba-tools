@@ -13,7 +13,7 @@ const KG_LITER_IN_LBS_CUFT = LBS_PER_KG * LITERS_PER_CUFT;
 // Density constants
 const STEEL_DENSITY = 7.85; // kg/liter (Chrome-molybdenum steel used in scuba tanks)
 const STEEL_DENSITY_IMP = STEEL_DENSITY * KG_LITER_IN_LBS_CUFT; // lbs/cuft
-const ALU_DENSITY = 2.70; // kg/liter (6061-T6 aluminum alloy used in scuba tanks)
+const ALU_DENSITY = 2.7; // kg/liter (6061-T6 aluminum alloy used in scuba tanks)
 const ALU_DENSITY_IMP = ALU_DENSITY * KG_LITER_IN_LBS_CUFT; // lbs/cuft
 const AIR_DENSITY = 0.001225; // kg/liter (at STP: 15°C, 1 bar)
 const AIR_DENSITY_IMP = AIR_DENSITY * KG_LITER_IN_LBS_CUFT; // lbs/cuft
@@ -81,7 +81,7 @@ export function calculateTankMetric(input: TankInput): TankResult {
 
   if (isDoubles) {
     // Doubles: 2 valves + manifold (more realistic than just 2x valve weight)
-    valve = hasValve ? (VALVE_WEIGHT * 2 + MANIFOLD_WEIGHT) : 0;
+    valve = hasValve ? VALVE_WEIGHT * 2 + MANIFOLD_WEIGHT : 0;
     liters = liters * 2;
     kg = kg * 2;
   }
@@ -150,7 +150,7 @@ export function calculateTankImperial(input: TankInput): TankResult {
 
   if (isDoubles) {
     // Doubles: 2 valves + manifold (more realistic than just 2x valve weight)
-    valve = hasValve ? ((VALVE_WEIGHT * 2 + MANIFOLD_WEIGHT) * LBS_PER_KG) : 0;
+    valve = hasValve ? (VALVE_WEIGHT * 2 + MANIFOLD_WEIGHT) * LBS_PER_KG : 0;
     cuft = cuft * 2;
     lbs = lbs * 2;
   }

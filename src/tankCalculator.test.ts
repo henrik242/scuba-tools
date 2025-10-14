@@ -1,10 +1,13 @@
-import { describe, expect, it } from 'vitest';
-import { calculateTankMetric, calculateTankImperial, TankInput } from './tankCalculator';
+import { describe, expect, it } from "vitest";
+import {
+  calculateTankMetric,
+  calculateTankImperial,
+  TankInput,
+} from "./tankCalculator";
 
-describe('Tank Calculator - Professional Scuba Tank Calculations', () => {
-
-  describe('Real-world Steel Tanks (Metric)', () => {
-    it('should calculate buoyancy for standard 12L 232 bar steel tank (3kg empty weight)', () => {
+describe("Tank Calculator - Professional Scuba Tank Calculations", () => {
+  describe("Real-world Steel Tanks (Metric)", () => {
+    it("should calculate buoyancy for standard 12L 232 bar steel tank (3kg empty weight)", () => {
       const input: TankInput = {
         liters: 12,
         bar: 232,
@@ -33,7 +36,7 @@ describe('Tank Calculator - Professional Scuba Tank Calculations', () => {
       expect(airWeight).toBeLessThan(3.8);
     });
 
-    it('should calculate buoyancy for 15L 232 bar steel tank', () => {
+    it("should calculate buoyancy for 15L 232 bar steel tank", () => {
       const input: TankInput = {
         liters: 15,
         bar: 232,
@@ -59,7 +62,7 @@ describe('Tank Calculator - Professional Scuba Tank Calculations', () => {
       expect(airWeight).toBeLessThan(4.7);
     });
 
-    it('should calculate buoyancy for twin 12L steel tanks with manifold', () => {
+    it("should calculate buoyancy for twin 12L steel tanks with manifold", () => {
       const input: TankInput = {
         liters: 12,
         bar: 232,
@@ -89,7 +92,7 @@ describe('Tank Calculator - Professional Scuba Tank Calculations', () => {
       expect(airWeight).toBeLessThan(7.5);
     });
 
-    it('should calculate buoyancy for 10L 300 bar steel tank (high pressure)', () => {
+    it("should calculate buoyancy for 10L 300 bar steel tank (high pressure)", () => {
       const input: TankInput = {
         liters: 10,
         bar: 300,
@@ -115,8 +118,8 @@ describe('Tank Calculator - Professional Scuba Tank Calculations', () => {
     });
   });
 
-  describe('Real-world Aluminum Tanks (Metric)', () => {
-    it('should calculate buoyancy for 11L 207 bar aluminum tank', () => {
+  describe("Real-world Aluminum Tanks (Metric)", () => {
+    it("should calculate buoyancy for 11L 207 bar aluminum tank", () => {
       const input: TankInput = {
         liters: 11,
         bar: 207,
@@ -145,7 +148,7 @@ describe('Tank Calculator - Professional Scuba Tank Calculations', () => {
       expect(airWeight).toBeLessThan(3.1);
     });
 
-    it('should calculate buoyancy for 13L 207 bar aluminum tank', () => {
+    it("should calculate buoyancy for 13L 207 bar aluminum tank", () => {
       const input: TankInput = {
         liters: 13,
         bar: 207,
@@ -172,8 +175,8 @@ describe('Tank Calculator - Professional Scuba Tank Calculations', () => {
     });
   });
 
-  describe('Real-world Imperial Tanks', () => {
-    it('should calculate buoyancy for AL80 (Catalina)', () => {
+  describe("Real-world Imperial Tanks", () => {
+    it("should calculate buoyancy for AL80 (Catalina)", () => {
       const input: TankInput = {
         liters: 0,
         bar: 0,
@@ -199,7 +202,7 @@ describe('Tank Calculator - Professional Scuba Tank Calculations', () => {
       expect(result.fullBuoyancyLbs).toBeLessThan(1);
     });
 
-    it('should calculate buoyancy for HP100 steel tank', () => {
+    it("should calculate buoyancy for HP100 steel tank", () => {
       const input: TankInput = {
         liters: 0,
         bar: 0,
@@ -228,7 +231,7 @@ describe('Tank Calculator - Professional Scuba Tank Calculations', () => {
       expect(airWeight).toBeLessThan(8.5);
     });
 
-    it('should calculate buoyancy for HP120 steel tank', () => {
+    it("should calculate buoyancy for HP120 steel tank", () => {
       const input: TankInput = {
         liters: 0,
         bar: 0,
@@ -255,8 +258,8 @@ describe('Tank Calculator - Professional Scuba Tank Calculations', () => {
     });
   });
 
-  describe('Fresh Water vs Salt Water', () => {
-    it('should show more positive buoyancy in fresh water', () => {
+  describe("Fresh Water vs Salt Water", () => {
+    it("should show more positive buoyancy in fresh water", () => {
       const baseInput: TankInput = {
         liters: 12,
         bar: 232,
@@ -271,21 +274,29 @@ describe('Tank Calculator - Professional Scuba Tank Calculations', () => {
       };
 
       const saltResult = calculateTankMetric(baseInput);
-      const freshResult = calculateTankMetric({ ...baseInput, isSaltWater: false });
+      const freshResult = calculateTankMetric({
+        ...baseInput,
+        isSaltWater: false,
+      });
 
       // Fresh water provides less buoyancy, so tank should be more negative
-      expect(freshResult.emptyBuoyancyKg).toBeLessThan(saltResult.emptyBuoyancyKg);
-      expect(freshResult.fullBuoyancyKg).toBeLessThan(saltResult.fullBuoyancyKg);
+      expect(freshResult.emptyBuoyancyKg).toBeLessThan(
+        saltResult.emptyBuoyancyKg,
+      );
+      expect(freshResult.fullBuoyancyKg).toBeLessThan(
+        saltResult.fullBuoyancyKg,
+      );
 
       // Difference should be approximately 2.4% (salt water is 1.024 kg/L vs 1.0 kg/L)
-      const difference = saltResult.emptyBuoyancyKg - freshResult.emptyBuoyancyKg;
+      const difference =
+        saltResult.emptyBuoyancyKg - freshResult.emptyBuoyancyKg;
       expect(difference).toBeGreaterThan(0.2);
       expect(difference).toBeLessThan(0.7);
     });
   });
 
-  describe('Edge Cases and Validation', () => {
-    it('should handle tanks without valves', () => {
+  describe("Edge Cases and Validation", () => {
+    it("should handle tanks without valves", () => {
       const input: TankInput = {
         liters: 12,
         bar: 232,
@@ -307,7 +318,7 @@ describe('Tank Calculator - Professional Scuba Tank Calculations', () => {
       expect(result.emptyBuoyancyKg).not.toBeNaN();
     });
 
-    it('should handle very small pony bottles (3L)', () => {
+    it("should handle very small pony bottles (3L)", () => {
       const input: TankInput = {
         liters: 3,
         bar: 232,
@@ -332,7 +343,7 @@ describe('Tank Calculator - Professional Scuba Tank Calculations', () => {
       expect(airWeight).toBeLessThan(1.0);
     });
 
-    it('should handle large stage bottles (7L)', () => {
+    it("should handle large stage bottles (7L)", () => {
       const input: TankInput = {
         liters: 7,
         bar: 232,
@@ -357,7 +368,7 @@ describe('Tank Calculator - Professional Scuba Tank Calculations', () => {
       expect(airWeight).toBeLessThan(2.3);
     });
 
-    it('should handle low pressure (150 bar)', () => {
+    it("should handle low pressure (150 bar)", () => {
       const input: TankInput = {
         liters: 15,
         bar: 150,
@@ -380,8 +391,8 @@ describe('Tank Calculator - Professional Scuba Tank Calculations', () => {
     });
   });
 
-  describe('Unit Conversions', () => {
-    it('should correctly convert between metric and imperial', () => {
+  describe("Unit Conversions", () => {
+    it("should correctly convert between metric and imperial", () => {
       const metricInput: TankInput = {
         liters: 12,
         bar: 232,
@@ -405,10 +416,12 @@ describe('Tank Calculator - Professional Scuba Tank Calculations', () => {
 
       // Buoyancy conversions should match
       const convertedEmptyLbs = result.emptyBuoyancyKg * 2.20462;
-      expect(Math.abs(result.emptyBuoyancyLbs - convertedEmptyLbs)).toBeLessThan(0.2);
+      expect(
+        Math.abs(result.emptyBuoyancyLbs - convertedEmptyLbs),
+      ).toBeLessThan(0.2);
     });
 
-    it('should maintain consistency between metric and imperial calculations', () => {
+    it("should maintain consistency between metric and imperial calculations", () => {
       // AL80: 11.1L at 207 bar, 31.4 lbs
       const metricInput: TankInput = {
         liters: 11.1,
@@ -440,16 +453,20 @@ describe('Tank Calculator - Professional Scuba Tank Calculations', () => {
       const imperialResult = calculateTankImperial(imperialInput);
 
       // Results should be reasonably close (within 10% due to rounding)
-      const emptyDiff = Math.abs(metricResult.emptyBuoyancyKg - imperialResult.emptyBuoyancyKg);
+      const emptyDiff = Math.abs(
+        metricResult.emptyBuoyancyKg - imperialResult.emptyBuoyancyKg,
+      );
       expect(emptyDiff).toBeLessThan(0.5);
 
-      const fullDiff = Math.abs(metricResult.fullBuoyancyKg - imperialResult.fullBuoyancyKg);
+      const fullDiff = Math.abs(
+        metricResult.fullBuoyancyKg - imperialResult.fullBuoyancyKg,
+      );
       expect(fullDiff).toBeLessThan(0.5);
     });
   });
 
-  describe('Material Density Validation', () => {
-    it('should use correct steel density (7.85 kg/L for CrMo alloy)', () => {
+  describe("Material Density Validation", () => {
+    it("should use correct steel density (7.85 kg/L for CrMo alloy)", () => {
       // Two identical tanks, but one is steel and one is aluminum
       // The aluminum should weigh less for same internal volume
       const steelInput: TankInput = {
@@ -483,17 +500,20 @@ describe('Tank Calculator - Professional Scuba Tank Calculations', () => {
 
       // With same weight, aluminum tank displaces more water (less dense material)
       // So aluminum should be more positive
-      expect(aluminumResult.emptyBuoyancyKg).toBeGreaterThan(steelResult.emptyBuoyancyKg);
+      expect(aluminumResult.emptyBuoyancyKg).toBeGreaterThan(
+        steelResult.emptyBuoyancyKg,
+      );
 
       // The difference should reflect density ratio (7.85/2.70 ≈ 2.9)
-      const difference = aluminumResult.emptyBuoyancyKg - steelResult.emptyBuoyancyKg;
+      const difference =
+        aluminumResult.emptyBuoyancyKg - steelResult.emptyBuoyancyKg;
       expect(difference).toBeGreaterThan(3);
       expect(difference).toBeLessThan(6);
     });
   });
 
-  describe('Calculation Text Output', () => {
-    it('should generate detailed calculation steps', () => {
+  describe("Calculation Text Output", () => {
+    it("should generate detailed calculation steps", () => {
       const input: TankInput = {
         liters: 12,
         bar: 232,
@@ -510,12 +530,11 @@ describe('Tank Calculator - Professional Scuba Tank Calculations', () => {
       const result = calculateTankMetric(input);
 
       // Check that calculation text contains key information
-      expect(result.calculation).toContain('density');
-      expect(result.calculation).toContain('7.85');
-      expect(result.calculation).toContain('salt water');
-      expect(result.calculation).toContain('buoyancy');
-      expect(result.calculation).toContain('<b>');
+      expect(result.calculation).toContain("density");
+      expect(result.calculation).toContain("7.85");
+      expect(result.calculation).toContain("salt water");
+      expect(result.calculation).toContain("buoyancy");
+      expect(result.calculation).toContain("<b>");
     });
   });
 });
-

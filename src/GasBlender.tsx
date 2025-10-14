@@ -1,13 +1,13 @@
-import { useState, useEffect } from 'react'
-import { calculateBlendingSteps, Gas } from './gasBlender'
-import './App.css'
+import { useState, useEffect } from "react";
+import { calculateBlendingSteps, Gas } from "./gasBlender";
+import "./App.css";
 
 const DEFAULT_AVAILABLE_GASES: Gas[] = [
-  { name: 'Air', o2: 21, he: 0, editable: false },
-  { name: 'O2', o2: 100, he: 0, editable: false },
-  { name: 'Helium', o2: 0, he: 100, editable: false },
-  { name: 'Nitrox 32', o2: 32, he: 0, editable: true },
-  { name: '10/70', o2: 10, he: 70, editable: true },
+  { name: "Air", o2: 21, he: 0, editable: false },
+  { name: "O2", o2: 100, he: 0, editable: false },
+  { name: "Helium", o2: 0, he: 100, editable: false },
+  { name: "Nitrox 32", o2: 32, he: 0, editable: true },
+  { name: "10/70", o2: 10, he: 70, editable: true },
 ];
 
 function GasBlender() {
@@ -23,44 +23,63 @@ function GasBlender() {
   const [targetPressure, setTargetPressure] = useState<number>(220);
 
   // Available gases
-  const [availableGases, setAvailableGases] = useState<Gas[]>(DEFAULT_AVAILABLE_GASES);
+  const [availableGases, setAvailableGases] = useState<Gas[]>(
+    DEFAULT_AVAILABLE_GASES,
+  );
   const [selectedGases, setSelectedGases] = useState<Record<string, boolean>>({
-    'Air': true,
-    'O2': true,
-    'Helium': true,
-    'Nitrox 32': false,
-    '10/70': false,
+    Air: true,
+    O2: true,
+    Helium: true,
+    "Nitrox 32": false,
+    "10/70": false,
   });
 
   // Results
-  const [blendingSteps, setBlendingSteps] = useState<ReturnType<typeof calculateBlendingSteps> | null>(null);
+  const [blendingSteps, setBlendingSteps] = useState<ReturnType<
+    typeof calculateBlendingSteps
+  > | null>(null);
 
   // Load state from URL on mount
   useEffect(() => {
     const params = new URLSearchParams(window.location.hash.substring(1));
 
-    if (params.has('startVolume')) setStartVolume(parseFloat(params.get('startVolume')!) || 11);
-    if (params.has('startO2')) setStartO2(parseFloat(params.get('startO2')!) || 0);
-    if (params.has('startHe')) setStartHe(parseFloat(params.get('startHe')!) || 0);
-    if (params.has('startPressure')) setStartPressure(parseFloat(params.get('startPressure')!) || 0);
-    if (params.has('targetO2')) setTargetO2(parseFloat(params.get('targetO2')!) || 18);
-    if (params.has('targetHe')) setTargetHe(parseFloat(params.get('targetHe')!) || 45);
-    if (params.has('targetPressure')) setTargetPressure(parseFloat(params.get('targetPressure')!) || 220);
+    if (params.has("startVolume"))
+      setStartVolume(parseFloat(params.get("startVolume")!) || 11);
+    if (params.has("startO2"))
+      setStartO2(parseFloat(params.get("startO2")!) || 0);
+    if (params.has("startHe"))
+      setStartHe(parseFloat(params.get("startHe")!) || 0);
+    if (params.has("startPressure"))
+      setStartPressure(parseFloat(params.get("startPressure")!) || 0);
+    if (params.has("targetO2"))
+      setTargetO2(parseFloat(params.get("targetO2")!) || 18);
+    if (params.has("targetHe"))
+      setTargetHe(parseFloat(params.get("targetHe")!) || 45);
+    if (params.has("targetPressure"))
+      setTargetPressure(parseFloat(params.get("targetPressure")!) || 220);
   }, []);
 
   // Update URL whenever state changes
   useEffect(() => {
     const params = new URLSearchParams();
-    params.set('startVolume', startVolume.toString());
-    params.set('startO2', startO2.toString());
-    params.set('startHe', startHe.toString());
-    params.set('startPressure', startPressure.toString());
-    params.set('targetO2', targetO2.toString());
-    params.set('targetHe', targetHe.toString());
-    params.set('targetPressure', targetPressure.toString());
+    params.set("startVolume", startVolume.toString());
+    params.set("startO2", startO2.toString());
+    params.set("startHe", startHe.toString());
+    params.set("startPressure", startPressure.toString());
+    params.set("targetO2", targetO2.toString());
+    params.set("targetHe", targetHe.toString());
+    params.set("targetPressure", targetPressure.toString());
 
     window.location.hash = params.toString();
-  }, [startVolume, startO2, startHe, startPressure, targetO2, targetHe, targetPressure]);
+  }, [
+    startVolume,
+    startO2,
+    startHe,
+    startPressure,
+    targetO2,
+    targetHe,
+    targetPressure,
+  ]);
 
   const handleCalculate = () => {
     const startingGas = {
@@ -76,21 +95,28 @@ function GasBlender() {
       pressure: parseFloat(targetPressure.toString()),
     };
 
-    const selected = availableGases.filter(gas => selectedGases[gas.name]);
+    const selected = availableGases.filter((gas) => selectedGases[gas.name]);
     const result = calculateBlendingSteps(startingGas, targetGas, selected);
     setBlendingSteps(result);
   };
 
   const toggleGas = (gasName: string) => {
-    setSelectedGases(prev => ({ ...prev, [gasName]: !prev[gasName] }));
+    setSelectedGases((prev) => ({ ...prev, [gasName]: !prev[gasName] }));
   };
 
-  const updateGas = (index: number, field: 'name' | 'o2' | 'he', value: string | number) => {
+  const updateGas = (
+    index: number,
+    field: "name" | "o2" | "he",
+    value: string | number,
+  ) => {
     const newGases = [...availableGases];
-    if (field === 'name') {
+    if (field === "name") {
       newGases[index] = { ...newGases[index], name: value as string };
     } else {
-      const updatedGas = { ...newGases[index], [field]: parseFloat(value.toString()) };
+      const updatedGas = {
+        ...newGases[index],
+        [field]: parseFloat(value.toString()),
+      };
       // Update the name to match the O2/He values if it's an editable gas
       if (updatedGas.editable) {
         if (updatedGas.he === 0 && updatedGas.o2 > 21 && updatedGas.o2 < 41) {
@@ -109,7 +135,7 @@ function GasBlender() {
       name: `21/0`,
       o2: 21,
       he: 0,
-      editable: true
+      editable: true,
     };
     setAvailableGases([...availableGases, newGas]);
     setSelectedGases({ ...selectedGases, [newGas.name]: true });
@@ -130,7 +156,16 @@ function GasBlender() {
     <div className="app">
       <div className="container">
         <h1>
-          <img src="/favicon.svg" alt="" style={{ width: '2rem', height: '2rem', verticalAlign: 'middle', marginRight: '0.5rem' }} />
+          <img
+            src="/favicon.svg"
+            alt=""
+            style={{
+              width: "2rem",
+              height: "2rem",
+              verticalAlign: "middle",
+              marginRight: "0.5rem",
+            }}
+          />
           Gas Blender Tool
         </h1>
 
@@ -180,7 +215,11 @@ function GasBlender() {
           </div>
           <div className="starting-gas-footer">
             <div className="mix-display">
-              Current Mix: <strong>{startO2}/{startHe}</strong> at <strong>{startPressure} bar</strong>
+              Current Mix:{" "}
+              <strong>
+                {startO2}/{startHe}
+              </strong>{" "}
+              at <strong>{startPressure} bar</strong>
             </div>
             <button onClick={handleEmpty} className="empty-btn">
               Reset
@@ -224,7 +263,11 @@ function GasBlender() {
             </div>
           </div>
           <div className="mix-display">
-            Target Mix: <strong>{targetO2}/{targetHe}</strong> at <strong>{targetPressure} bar</strong>
+            Target Mix:{" "}
+            <strong>
+              {targetO2}/{targetHe}
+            </strong>{" "}
+            at <strong>{targetPressure} bar</strong>
           </div>
         </div>
 
@@ -245,7 +288,7 @@ function GasBlender() {
                     <input
                       type="number"
                       value={gas.o2}
-                      onChange={(e) => updateGas(index, 'o2', e.target.value)}
+                      onChange={(e) => updateGas(index, "o2", e.target.value)}
                       className="gas-percent-input"
                       min="0"
                       max="100"
@@ -254,20 +297,29 @@ function GasBlender() {
                     <input
                       type="number"
                       value={gas.he}
-                      onChange={(e) => updateGas(index, 'he', e.target.value)}
+                      onChange={(e) => updateGas(index, "he", e.target.value)}
                       className="gas-percent-input"
                       min="0"
                       max="100"
                     />
-                    <button onClick={() => removeGas(index)} className="remove-gas-btn">✕</button>
+                    <button
+                      onClick={() => removeGas(index)}
+                      className="remove-gas-btn"
+                    >
+                      ✕
+                    </button>
                   </div>
                 ) : (
-                  <span className="gas-label">{gas.name} ({gas.o2}/{gas.he})</span>
+                  <span className="gas-label">
+                    {gas.name} ({gas.o2}/{gas.he})
+                  </span>
                 )}
               </div>
             ))}
           </div>
-          <button onClick={addCustomGas} className="add-gas-btn">+ Add Custom Gas</button>
+          <button onClick={addCustomGas} className="add-gas-btn">
+            + Add Custom Gas
+          </button>
         </div>
 
         <button className="calculate-btn" onClick={handleCalculate}>
@@ -280,7 +332,9 @@ function GasBlender() {
             {!blendingSteps.success ? (
               <p className="error">{blendingSteps.error}</p>
             ) : blendingSteps.steps.length === 0 ? (
-              <p className="no-steps">No blending needed - tank is already at target mix!</p>
+              <p className="no-steps">
+                No blending needed - tank is already at target mix!
+              </p>
             ) : (
               <div className="steps-list">
                 {blendingSteps.steps.map((step, index) => (
@@ -292,12 +346,19 @@ function GasBlender() {
                         <div className="detail-row">
                           <span className="label">Pressure:</span>
                           <span className="value">
-                            {step.fromPressure.toFixed(1)} bar → {step.toPressure.toFixed(1)} bar
+                            {step.fromPressure.toFixed(1)} bar →{" "}
+                            {step.toPressure.toFixed(1)} bar
                             {step.addedPressure && (
-                              <span className="added"> (+{step.addedPressure.toFixed(1)} bar)</span>
+                              <span className="added">
+                                {" "}
+                                (+{step.addedPressure.toFixed(1)} bar)
+                              </span>
                             )}
                             {step.drainedPressure && (
-                              <span className="drained"> (-{step.drainedPressure.toFixed(1)} bar)</span>
+                              <span className="drained">
+                                {" "}
+                                (-{step.drainedPressure.toFixed(1)} bar)
+                              </span>
                             )}
                           </span>
                         </div>
@@ -319,29 +380,32 @@ function GasBlender() {
               <div className="final-mix">
                 <div className="final-detail">
                   <span className="label">Mix:</span>
-                  <span className="value">{blendingSteps.finalMix.o2}/{blendingSteps.finalMix.he}</span>
+                  <span className="value">
+                    {blendingSteps.finalMix.o2}/{blendingSteps.finalMix.he}
+                  </span>
                 </div>
                 <div className="final-detail">
                   <span className="label">Pressure:</span>
-                  <span className="value">{blendingSteps.finalMix.pressure} bar</span>
+                  <span className="value">
+                    {blendingSteps.finalMix.pressure} bar
+                  </span>
                 </div>
               </div>
               {Math.abs(blendingSteps.finalMix.o2 - targetO2) > 1 ||
-               Math.abs(blendingSteps.finalMix.he - targetHe) > 1 ? (
+              Math.abs(blendingSteps.finalMix.he - targetHe) > 1 ? (
                 <div className="warning">
-                  ⚠️ Final mix differs from target. Adjust available gases or starting conditions.
+                  ⚠️ Final mix differs from target. Adjust available gases or
+                  starting conditions.
                 </div>
               ) : (
-                <div className="success">
-                  ✓ Target mix achieved!
-                </div>
+                <div className="success">✓ Target mix achieved!</div>
               )}
             </div>
           </div>
         )}
       </div>
     </div>
-  )
+  );
 }
 
-export default GasBlender
+export default GasBlender;
