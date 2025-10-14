@@ -39,12 +39,12 @@ function GasBlender() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.hash.substring(1));
 
-    if (params.has('startVolume')) setStartVolume(parseFloat(params.get('startVolume')!) || 3);
-    if (params.has('startO2')) setStartO2(parseFloat(params.get('startO2')!) || 14);
-    if (params.has('startHe')) setStartHe(parseFloat(params.get('startHe')!) || 67);
-    if (params.has('startPressure')) setStartPressure(parseFloat(params.get('startPressure')!) || 47);
-    if (params.has('targetO2')) setTargetO2(parseFloat(params.get('targetO2')!) || 15);
-    if (params.has('targetHe')) setTargetHe(parseFloat(params.get('targetHe')!) || 55);
+    if (params.has('startVolume')) setStartVolume(parseFloat(params.get('startVolume')!) || 11);
+    if (params.has('startO2')) setStartO2(parseFloat(params.get('startO2')!) || 0);
+    if (params.has('startHe')) setStartHe(parseFloat(params.get('startHe')!) || 0);
+    if (params.has('startPressure')) setStartPressure(parseFloat(params.get('startPressure')!) || 0);
+    if (params.has('targetO2')) setTargetO2(parseFloat(params.get('targetO2')!) || 18);
+    if (params.has('targetHe')) setTargetHe(parseFloat(params.get('targetHe')!) || 45);
     if (params.has('targetPressure')) setTargetPressure(parseFloat(params.get('targetPressure')!) || 220);
   }, []);
 
