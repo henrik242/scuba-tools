@@ -63,7 +63,7 @@ const createMixLabel = (o2Fraction: number, heFraction: number): string =>
 export function calculateBlendingSteps(
   startingGas: TankState,
   targetGas: TargetGas,
-  availableGases: Gas[]
+  availableGases: Gas[],
 ): BlendingResult {
   const steps: BlendingStep[] = [];
 
@@ -71,9 +71,13 @@ export function calculateBlendingSteps(
   if (targetGas.o2 + targetGas.he > 100) {
     return {
       steps: [],
-      finalMix: {o2: startingGas.o2, he: startingGas.he, pressure: startingGas.pressure},
+      finalMix: {
+        o2: startingGas.o2,
+        he: startingGas.he,
+        pressure: startingGas.pressure,
+      },
       success: false,
-      error: 'Target O₂ + He exceeds 100%'
+      error: "Target O₂ + He exceeds 100%",
     };
   }
 
@@ -100,14 +104,14 @@ export function calculateBlendingSteps(
 
   const getFractions = () => {
     if (currentPressure <= 0.0001) {
-      return {o2: 0, he: 0, n2: 0};
+      return { o2: 0, he: 0, n2: 0 };
     }
 
     const o2 = currentO2PP / currentPressure;
     const he = currentHePP / currentPressure;
     const n2 = Math.max(0, 1 - o2 - he);
 
-    return {o2, he, n2};
+    return { o2, he, n2 };
   };
 
   const updateDeltas = () => {
@@ -134,18 +138,25 @@ export function calculateBlendingSteps(
     const updatedFractions = getFractions();
 
     steps.push({
-      action: forceComplete ? 'Drain tank completely' : `Drain to ${roundTo(newPressure, 2)} bar`,
+      action: forceComplete
+        ? "Drain tank completely"
+        : `Drain to ${roundTo(newPressure, 2)} bar`,
       fromPressure: roundTo(previousPressure, 2),
       toPressure: roundTo(newPressure, 2),
       drainedPressure: roundTo(previousPressure - newPressure, 2),
       currentMix: createMixLabel(previousFractions.o2, previousFractions.he),
-      newMix: createMixLabel(updatedFractions.o2, updatedFractions.he)
+      newMix: createMixLabel(updatedFractions.o2, updatedFractions.he),
     });
 
     updateDeltas();
   };
 
-  const recordGasAddition = (gas: Gas, amount: number, label: string, decimals = 1) => {
+  const recordGasAddition = (
+    gas: Gas,
+    amount: number,
+    label: string,
+    decimals = 1,
+  ) => {
     const roundedAmount = roundTo(amount, decimals);
 
     if (roundedAmount <= 0) {
@@ -176,7 +187,7 @@ export function calculateBlendingSteps(
       toPressure: roundTo(currentPressure, 2),
       addedPressure: roundedAmount,
       currentMix: createMixLabel(previousFractions.o2, previousFractions.he),
-      newMix: createMixLabel(updatedFractions.o2, updatedFractions.he)
+      newMix: createMixLabel(updatedFractions.o2, updatedFractions.he),
     });
 
     updateDeltas();
@@ -226,10 +237,14 @@ export function calculateBlendingSteps(
   }
 
   // Get available gases
-  const pureHe = availableGases.find(g => g.he > 95 && g.o2 < 5);
-  const pureO2 = availableGases.find(g => g.o2 > 95 && g.he < 5);
-  const trimixGases = availableGases.filter(g => g.he > 30).sort((a, b) => b.he - a.he);
-  const airGases = availableGases.filter(g => g.he < 5 && g.o2 >= 19 && g.o2 <= 40).sort((a, b) => a.o2 - b.o2);
+  const pureHe = availableGases.find((g) => g.he > 95 && g.o2 < 5);
+  const pureO2 = availableGases.find((g) => g.o2 > 95 && g.he < 5);
+  const trimixGases = availableGases
+    .filter((g) => g.he > 30)
+    .sort((a, b) => b.he - a.he);
+  const airGases = availableGases
+    .filter((g) => g.he < 5 && g.o2 >= 19 && g.o2 <= 40)
+    .sort((a, b) => a.o2 - b.o2);
 
   // STEP 1: Add helium if needed (use pure He or trimix)
   if (deltaHe > 0.1) {
@@ -266,7 +281,9 @@ export function calculateBlendingSteps(
         const testO2Fraction = testO2PP / targetPressure;
         const testHeFraction = testHePP / targetPressure;
 
-        const diff = Math.abs(testO2Fraction * 100 - targetGas.o2) + Math.abs(testHeFraction * 100 - targetGas.he);
+        const diff =
+          Math.abs(testO2Fraction * 100 - targetGas.o2) +
+          Math.abs(testHeFraction * 100 - targetGas.he);
 
         if (diff < bestDiff) {
           bestDiff = diff;
@@ -283,12 +300,10 @@ export function calculateBlendingSteps(
         // (pureO2.o2/100)*x + (airGas.o2/100)*y = neededO2PP
 
         const neededO2PP = targetO2PP - currentO2PP;
-        const neededHePP = targetHePP - currentHePP;
         const neededN2PP = targetN2PP - currentN2PP;
 
         const o2GasFraction = pureO2.o2 / 100;
         const airGasFraction = bestAirGas.o2 / 100;
-        const airHeGasFraction = bestAirGas.he / 100;
         const airN2GasFraction = (100 - bestAirGas.o2 - bestAirGas.he) / 100;
 
         // Solve for y (air/nitrox pressure) using N2 or O2 equation
@@ -308,7 +323,9 @@ export function calculateBlendingSteps(
           // y = (neededO2PP - o2GasFraction*remainingPressure) / (airGasFraction - o2GasFraction)
 
           if (Math.abs(airGasFraction - o2GasFraction) > 0.01) {
-            airPressure = (neededO2PP - o2GasFraction * remainingPressure) / (airGasFraction - o2GasFraction);
+            airPressure =
+              (neededO2PP - o2GasFraction * remainingPressure) /
+              (airGasFraction - o2GasFraction);
             o2Pressure = remainingPressure - airPressure;
           } else {
             // Gases too similar, use simpler approach
@@ -339,7 +356,11 @@ export function calculateBlendingSteps(
 
         // Then add air/nitrox
         if (airPressure > 0.1) {
-          recordGasAddition(bestAirGas, airPressure, `Top up with ${bestAirGas.name}`);
+          recordGasAddition(
+            bestAirGas,
+            airPressure,
+            `Top up with ${bestAirGas.name}`,
+          );
         }
       } else {
         // Original algorithm for cases without precise two-gas solution
@@ -358,10 +379,17 @@ export function calculateBlendingSteps(
         }
 
         // STEP 3: Now add air/nitrox to reach target pressure (ALWAYS LAST)
-        const finalRemainingPressure = roundTo(targetPressure - currentPressure, 1);
+        const finalRemainingPressure = roundTo(
+          targetPressure - currentPressure,
+          1,
+        );
 
         if (finalRemainingPressure > 0.1) {
-          recordGasAddition(bestAirGas, finalRemainingPressure, `Top up with ${bestAirGas.name}`);
+          recordGasAddition(
+            bestAirGas,
+            finalRemainingPressure,
+            `Top up with ${bestAirGas.name}`,
+          );
         }
       }
     }
@@ -372,7 +400,7 @@ export function calculateBlendingSteps(
   const finalMix = {
     o2: toPercentLabel(finalFractions.o2),
     he: toPercentLabel(finalFractions.he),
-    pressure: roundTo(currentPressure, 1)
+    pressure: roundTo(currentPressure, 1),
   };
 
   // Check if we're close enough to target (more lenient tolerance)
@@ -385,9 +413,9 @@ export function calculateBlendingSteps(
       steps,
       finalMix,
       success: false,
-      error: `Unable to reach target mix accurately. Final: ${finalMix.o2}/${finalMix.he} at ${finalMix.pressure} bar. Try adjusting available gases.`
+      error: `Unable to reach target mix accurately. Final: ${finalMix.o2}/${finalMix.he} at ${finalMix.pressure} bar. Try adjusting available gases.`,
     };
   }
 
-  return {steps, finalMix, success: true};
+  return { steps, finalMix, success: true };
 }

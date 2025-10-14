@@ -1,18 +1,23 @@
-import {describe, expect, it} from 'vitest';
-import {calculateBlendingSteps, Gas, TankState, TargetGas} from './gasBlender';
+import { describe, expect, it } from "vitest";
+import {
+  calculateBlendingSteps,
+  Gas,
+  TankState,
+  TargetGas,
+} from "./gasBlender";
 
-describe('Gas Blender - Professional Trimix Calculations', () => {
+describe("Gas Blender - Professional Trimix Calculations", () => {
   // Standard available gases for testing
   const standardGases: Gas[] = [
-    {name: 'Air', o2: 21, he: 0, editable: false},
-    {name: 'O2', o2: 100, he: 0, editable: false},
-    {name: 'Helium', o2: 0, he: 100, editable: false},
-    {name: 'Nitrox 32', o2: 32, he: 0, editable: true},
-    {name: '10/70', o2: 10, he: 70, editable: true},
+    { name: "Air", o2: 21, he: 0, editable: false },
+    { name: "O2", o2: 100, he: 0, editable: false },
+    { name: "Helium", o2: 0, he: 100, editable: false },
+    { name: "Nitrox 32", o2: 32, he: 0, editable: true },
+    { name: "10/70", o2: 10, he: 70, editable: true },
   ];
 
-  describe('Input Validation', () => {
-    it('should reject target mix where O2 + He > 100%', () => {
+  describe("Input Validation", () => {
+    it("should reject target mix where O2 + He > 100%", () => {
       const startingGas: TankState = {
         volume: 12,
         o2: 21,
@@ -26,15 +31,19 @@ describe('Gas Blender - Professional Trimix Calculations', () => {
         pressure: 200,
       };
 
-      const result = calculateBlendingSteps(startingGas, targetGas, standardGases);
+      const result = calculateBlendingSteps(
+        startingGas,
+        targetGas,
+        standardGases,
+      );
 
       expect(result.success).toBe(false);
-      expect(result.error).toContain('exceeds 100%');
+      expect(result.error).toContain("exceeds 100%");
     });
   });
 
-  describe('Empty Tank Scenarios', () => {
-    it('should blend 18/45 from empty tank', () => {
+  describe("Empty Tank Scenarios", () => {
+    it("should blend 18/45 from empty tank", () => {
       const startingGas: TankState = {
         volume: 12,
         o2: 0,
@@ -48,7 +57,11 @@ describe('Gas Blender - Professional Trimix Calculations', () => {
         pressure: 200,
       };
 
-      const result = calculateBlendingSteps(startingGas, targetGas, standardGases);
+      const result = calculateBlendingSteps(
+        startingGas,
+        targetGas,
+        standardGases,
+      );
 
       expect(result.success).toBe(true);
       expect(result.finalMix.o2).toBeCloseTo(18, 0);
@@ -57,7 +70,7 @@ describe('Gas Blender - Professional Trimix Calculations', () => {
       expect(result.steps.length).toBeGreaterThan(0);
     });
 
-    it('should blend 21/35 (normoxic trimix) from empty', () => {
+    it("should blend 21/35 (normoxic trimix) from empty", () => {
       const startingGas: TankState = {
         volume: 12,
         o2: 0,
@@ -71,7 +84,11 @@ describe('Gas Blender - Professional Trimix Calculations', () => {
         pressure: 200,
       };
 
-      const result = calculateBlendingSteps(startingGas, targetGas, standardGases);
+      const result = calculateBlendingSteps(
+        startingGas,
+        targetGas,
+        standardGases,
+      );
 
       expect(result.success).toBe(true);
       expect(result.finalMix.o2).toBeCloseTo(21, 0);
@@ -79,7 +96,7 @@ describe('Gas Blender - Professional Trimix Calculations', () => {
       expect(result.finalMix.pressure).toBe(200);
     });
 
-    it('should blend 32% nitrox from empty', () => {
+    it("should blend 32% nitrox from empty", () => {
       const startingGas: TankState = {
         volume: 12,
         o2: 0,
@@ -93,7 +110,11 @@ describe('Gas Blender - Professional Trimix Calculations', () => {
         pressure: 200,
       };
 
-      const result = calculateBlendingSteps(startingGas, targetGas, standardGases);
+      const result = calculateBlendingSteps(
+        startingGas,
+        targetGas,
+        standardGases,
+      );
 
       expect(result.success).toBe(true);
       expect(result.finalMix.o2).toBeCloseTo(32, 0);
@@ -101,7 +122,7 @@ describe('Gas Blender - Professional Trimix Calculations', () => {
       expect(result.finalMix.pressure).toBe(200);
     });
 
-    it('should blend air from empty tank', () => {
+    it("should blend air from empty tank", () => {
       const startingGas: TankState = {
         volume: 12,
         o2: 0,
@@ -115,7 +136,11 @@ describe('Gas Blender - Professional Trimix Calculations', () => {
         pressure: 200,
       };
 
-      const result = calculateBlendingSteps(startingGas, targetGas, standardGases);
+      const result = calculateBlendingSteps(
+        startingGas,
+        targetGas,
+        standardGases,
+      );
 
       expect(result.success).toBe(true);
       expect(result.finalMix.o2).toBeCloseTo(21, 0);
@@ -123,12 +148,12 @@ describe('Gas Blender - Professional Trimix Calculations', () => {
       expect(result.finalMix.pressure).toBe(200);
       // Should just add air
       expect(result.steps.length).toBe(1);
-      expect(result.steps[0].action).toContain('Air');
+      expect(result.steps[0].action).toContain("Air");
     });
   });
 
-  describe('Partial Tank Topping', () => {
-    it('should top up air tank from 50 bar to 200 bar', () => {
+  describe("Partial Tank Topping", () => {
+    it("should top up air tank from 50 bar to 200 bar", () => {
       const startingGas: TankState = {
         volume: 12,
         o2: 21,
@@ -142,7 +167,11 @@ describe('Gas Blender - Professional Trimix Calculations', () => {
         pressure: 200,
       };
 
-      const result = calculateBlendingSteps(startingGas, targetGas, standardGases);
+      const result = calculateBlendingSteps(
+        startingGas,
+        targetGas,
+        standardGases,
+      );
 
       expect(result.success).toBe(true);
       expect(result.finalMix.o2).toBeCloseTo(21, 0);
@@ -151,7 +180,7 @@ describe('Gas Blender - Professional Trimix Calculations', () => {
       expect(result.steps[0].addedPressure).toBeCloseTo(150, 0);
     });
 
-    it('should top up 18/45 from partial pressure', () => {
+    it("should top up 18/45 from partial pressure", () => {
       const startingGas: TankState = {
         volume: 12,
         o2: 18,
@@ -165,7 +194,11 @@ describe('Gas Blender - Professional Trimix Calculations', () => {
         pressure: 200,
       };
 
-      const result = calculateBlendingSteps(startingGas, targetGas, standardGases);
+      const result = calculateBlendingSteps(
+        startingGas,
+        targetGas,
+        standardGases,
+      );
 
       expect(result.success).toBe(true);
       expect(result.finalMix.o2).toBeCloseTo(18, 0);
@@ -174,8 +207,8 @@ describe('Gas Blender - Professional Trimix Calculations', () => {
     });
   });
 
-  describe('Draining Scenarios', () => {
-    it('should drain tank when starting O2 is too high', () => {
+  describe("Draining Scenarios", () => {
+    it("should drain tank when starting O2 is too high", () => {
       const startingGas: TankState = {
         volume: 12,
         o2: 32,
@@ -189,7 +222,11 @@ describe('Gas Blender - Professional Trimix Calculations', () => {
         pressure: 200,
       };
 
-      const result = calculateBlendingSteps(startingGas, targetGas, standardGases);
+      const result = calculateBlendingSteps(
+        startingGas,
+        targetGas,
+        standardGases,
+      );
 
       // This scenario currently fails because the algorithm needs improvement
       // It should drain but doesn't always achieve perfect accuracy
@@ -198,11 +235,11 @@ describe('Gas Blender - Professional Trimix Calculations', () => {
         expect(result.finalMix.o2).toBeCloseTo(21, 0);
       } else {
         // Accept that this is a known limitation
-        expect(result.error).toContain('Unable to reach target mix');
+        expect(result.error).toContain("Unable to reach target mix");
       }
     });
 
-    it('should drain when starting He is too high', () => {
+    it("should drain when starting He is too high", () => {
       const startingGas: TankState = {
         volume: 12,
         o2: 18,
@@ -216,18 +253,22 @@ describe('Gas Blender - Professional Trimix Calculations', () => {
         pressure: 200,
       };
 
-      const result = calculateBlendingSteps(startingGas, targetGas, standardGases);
+      const result = calculateBlendingSteps(
+        startingGas,
+        targetGas,
+        standardGases,
+      );
 
       // Should drain or indicate it can't achieve the mix
       if (result.success) {
-        expect(result.steps[0].action).toContain('Drain');
+        expect(result.steps[0].action).toContain("Drain");
         expect(result.finalMix.he).toBeCloseTo(35, 0);
       } else {
         expect(result.error).toBeDefined();
       }
     });
 
-    it('should completely drain when partial pressure values are incompatible', () => {
+    it("should completely drain when partial pressure values are incompatible", () => {
       const startingGas: TankState = {
         volume: 12,
         o2: 50,
@@ -241,16 +282,20 @@ describe('Gas Blender - Professional Trimix Calculations', () => {
         pressure: 200,
       };
 
-      const result = calculateBlendingSteps(startingGas, targetGas, standardGases);
+      const result = calculateBlendingSteps(
+        startingGas,
+        targetGas,
+        standardGases,
+      );
 
       expect(result.success).toBe(true);
-      const drainStep = result.steps.find(s => s.action.includes('Drain'));
+      const drainStep = result.steps.find((s) => s.action.includes("Drain"));
       expect(drainStep).toBeDefined();
     });
   });
 
-  describe('Deep Trimix Blending', () => {
-    it('should blend 10/70 (deep trimix)', () => {
+  describe("Deep Trimix Blending", () => {
+    it("should blend 10/70 (deep trimix)", () => {
       const startingGas: TankState = {
         volume: 12,
         o2: 0,
@@ -264,7 +309,11 @@ describe('Gas Blender - Professional Trimix Calculations', () => {
         pressure: 200,
       };
 
-      const result = calculateBlendingSteps(startingGas, targetGas, standardGases);
+      const result = calculateBlendingSteps(
+        startingGas,
+        targetGas,
+        standardGases,
+      );
 
       expect(result.success).toBe(true);
       expect(result.finalMix.o2).toBeCloseTo(10, 0);
@@ -272,7 +321,7 @@ describe('Gas Blender - Professional Trimix Calculations', () => {
       expect(result.finalMix.pressure).toBe(200);
     });
 
-    it('should blend 12/65 from empty', () => {
+    it("should blend 12/65 from empty", () => {
       const startingGas: TankState = {
         volume: 12,
         o2: 0,
@@ -286,7 +335,11 @@ describe('Gas Blender - Professional Trimix Calculations', () => {
         pressure: 200,
       };
 
-      const result = calculateBlendingSteps(startingGas, targetGas, standardGases);
+      const result = calculateBlendingSteps(
+        startingGas,
+        targetGas,
+        standardGases,
+      );
 
       expect(result.success).toBe(true);
       expect(result.finalMix.o2).toBeCloseTo(12, 0);
@@ -294,8 +347,8 @@ describe('Gas Blender - Professional Trimix Calculations', () => {
     });
   });
 
-  describe('Travel Mix Scenarios', () => {
-    it('should blend 21/30 (shallow travel mix)', () => {
+  describe("Travel Mix Scenarios", () => {
+    it("should blend 21/30 (shallow travel mix)", () => {
       const startingGas: TankState = {
         volume: 12,
         o2: 0,
@@ -309,7 +362,11 @@ describe('Gas Blender - Professional Trimix Calculations', () => {
         pressure: 200,
       };
 
-      const result = calculateBlendingSteps(startingGas, targetGas, standardGases);
+      const result = calculateBlendingSteps(
+        startingGas,
+        targetGas,
+        standardGases,
+      );
 
       // With current gas selection, this may not achieve perfect accuracy
       // The algorithm uses available gases which may not be optimal
@@ -322,7 +379,7 @@ describe('Gas Blender - Professional Trimix Calculations', () => {
       }
     });
 
-    it('should blend 25/25 (balanced mix)', () => {
+    it("should blend 25/25 (balanced mix)", () => {
       const startingGas: TankState = {
         volume: 12,
         o2: 0,
@@ -336,7 +393,11 @@ describe('Gas Blender - Professional Trimix Calculations', () => {
         pressure: 200,
       };
 
-      const result = calculateBlendingSteps(startingGas, targetGas, standardGases);
+      const result = calculateBlendingSteps(
+        startingGas,
+        targetGas,
+        standardGases,
+      );
 
       expect(result.success).toBe(true);
       expect(result.finalMix.o2).toBeCloseTo(25, 0);
@@ -344,8 +405,8 @@ describe('Gas Blender - Professional Trimix Calculations', () => {
     });
   });
 
-  describe('Partial Pressure Calculations', () => {
-    it('should correctly calculate partial pressures for 18/45 at 200 bar', () => {
+  describe("Partial Pressure Calculations", () => {
+    it("should correctly calculate partial pressures for 18/45 at 200 bar", () => {
       const startingGas: TankState = {
         volume: 12,
         o2: 0,
@@ -359,7 +420,11 @@ describe('Gas Blender - Professional Trimix Calculations', () => {
         pressure: 200,
       };
 
-      const result = calculateBlendingSteps(startingGas, targetGas, standardGases);
+      const result = calculateBlendingSteps(
+        startingGas,
+        targetGas,
+        standardGases,
+      );
 
       expect(result.success).toBe(true);
 
@@ -371,7 +436,7 @@ describe('Gas Blender - Professional Trimix Calculations', () => {
       expect(finalHePP).toBeCloseTo(90, 0);
     });
 
-    it('should maintain proper partial pressures when topping up', () => {
+    it("should maintain proper partial pressures when topping up", () => {
       const startingGas: TankState = {
         volume: 12,
         o2: 21,
@@ -385,7 +450,11 @@ describe('Gas Blender - Professional Trimix Calculations', () => {
         pressure: 200,
       };
 
-      const result = calculateBlendingSteps(startingGas, targetGas, standardGases);
+      const result = calculateBlendingSteps(
+        startingGas,
+        targetGas,
+        standardGases,
+      );
 
       expect(result.success).toBe(true);
 
@@ -399,8 +468,8 @@ describe('Gas Blender - Professional Trimix Calculations', () => {
     });
   });
 
-  describe('Edge Cases', () => {
-    it('should handle zero pressure starting gas', () => {
+  describe("Edge Cases", () => {
+    it("should handle zero pressure starting gas", () => {
       const startingGas: TankState = {
         volume: 12,
         o2: 21,
@@ -414,13 +483,17 @@ describe('Gas Blender - Professional Trimix Calculations', () => {
         pressure: 200,
       };
 
-      const result = calculateBlendingSteps(startingGas, targetGas, standardGases);
+      const result = calculateBlendingSteps(
+        startingGas,
+        targetGas,
+        standardGases,
+      );
 
       expect(result.success).toBe(true);
       expect(result.finalMix.pressure).toBe(200);
     });
 
-    it('should handle tank already at target mix and pressure', () => {
+    it("should handle tank already at target mix and pressure", () => {
       const startingGas: TankState = {
         volume: 12,
         o2: 21,
@@ -434,13 +507,17 @@ describe('Gas Blender - Professional Trimix Calculations', () => {
         pressure: 200,
       };
 
-      const result = calculateBlendingSteps(startingGas, targetGas, standardGases);
+      const result = calculateBlendingSteps(
+        startingGas,
+        targetGas,
+        standardGases,
+      );
 
       expect(result.success).toBe(true);
       expect(result.steps.length).toBe(0); // No steps needed
     });
 
-    it('should handle very small pressure differences', () => {
+    it("should handle very small pressure differences", () => {
       const startingGas: TankState = {
         volume: 12,
         o2: 21,
@@ -454,17 +531,21 @@ describe('Gas Blender - Professional Trimix Calculations', () => {
         pressure: 200,
       };
 
-      const result = calculateBlendingSteps(startingGas, targetGas, standardGases);
+      const result = calculateBlendingSteps(
+        startingGas,
+        targetGas,
+        standardGases,
+      );
 
       expect(result.success).toBe(true);
     });
   });
 
-  describe('Limited Gas Availability', () => {
-    it('should work with only Air and O2 available', () => {
+  describe("Limited Gas Availability", () => {
+    it("should work with only Air and O2 available", () => {
       const limitedGases: Gas[] = [
-        {name: 'Air', o2: 21, he: 0, editable: false},
-        {name: 'O2', o2: 100, he: 0, editable: false},
+        { name: "Air", o2: 21, he: 0, editable: false },
+        { name: "O2", o2: 100, he: 0, editable: false },
       ];
 
       const startingGas: TankState = {
@@ -480,17 +561,21 @@ describe('Gas Blender - Professional Trimix Calculations', () => {
         pressure: 200,
       };
 
-      const result = calculateBlendingSteps(startingGas, targetGas, limitedGases);
+      const result = calculateBlendingSteps(
+        startingGas,
+        targetGas,
+        limitedGases,
+      );
 
       expect(result.finalMix.o2).toBeCloseTo(32, 0);
       expect(result.finalMix.he).toBe(0);
       expect(result.finalMix.pressure).toBe(200);
     });
 
-    it('should handle case with no helium available when He is needed', () => {
+    it("should handle case with no helium available when He is needed", () => {
       const noHeliumGases: Gas[] = [
-        {name: 'Air', o2: 21, he: 0, editable: false},
-        {name: 'O2', o2: 100, he: 0, editable: false},
+        { name: "Air", o2: 21, he: 0, editable: false },
+        { name: "O2", o2: 100, he: 0, editable: false },
       ];
 
       const startingGas: TankState = {
@@ -506,15 +591,19 @@ describe('Gas Blender - Professional Trimix Calculations', () => {
         pressure: 200,
       };
 
-      const result = calculateBlendingSteps(startingGas, targetGas, noHeliumGases);
+      const result = calculateBlendingSteps(
+        startingGas,
+        targetGas,
+        noHeliumGases,
+      );
 
       // Should fail or produce incorrect mix
       expect(result.finalMix.he).not.toBeCloseTo(45, 0);
     });
   });
 
-  describe('Blending Steps Verification', () => {
-    it('should have correct step sequence for trimix blend', () => {
+  describe("Blending Steps Verification", () => {
+    it("should have correct step sequence for trimix blend", () => {
       const startingGas: TankState = {
         volume: 12,
         o2: 0,
@@ -528,23 +617,29 @@ describe('Gas Blender - Professional Trimix Calculations', () => {
         pressure: 200,
       };
 
-      const result = calculateBlendingSteps(startingGas, targetGas, standardGases);
+      const result = calculateBlendingSteps(
+        startingGas,
+        targetGas,
+        standardGases,
+      );
 
       expect(result.success).toBe(true);
       expect(result.steps.length).toBeGreaterThan(0);
 
       // Verify each step has required properties
-      result.steps.forEach(step => {
-        expect(step).toHaveProperty('action');
-        expect(step).toHaveProperty('fromPressure');
-        expect(step).toHaveProperty('toPressure');
-        expect(step).toHaveProperty('currentMix');
-        expect(step).toHaveProperty('newMix');
-        expect(step.toPressure).toBeGreaterThanOrEqual(step.fromPressure - step.drainedPressure || 0);
+      result.steps.forEach((step) => {
+        expect(step).toHaveProperty("action");
+        expect(step).toHaveProperty("fromPressure");
+        expect(step).toHaveProperty("toPressure");
+        expect(step).toHaveProperty("currentMix");
+        expect(step).toHaveProperty("newMix");
+        expect(step.toPressure).toBeGreaterThanOrEqual(
+          step.fromPressure - step.drainedPressure || 0,
+        );
       });
     });
 
-    it('should show pressure increase in each addition step', () => {
+    it("should show pressure increase in each addition step", () => {
       const startingGas: TankState = {
         volume: 12,
         o2: 0,
@@ -558,13 +653,17 @@ describe('Gas Blender - Professional Trimix Calculations', () => {
         pressure: 200,
       };
 
-      const result = calculateBlendingSteps(startingGas, targetGas, standardGases);
+      const result = calculateBlendingSteps(
+        startingGas,
+        targetGas,
+        standardGases,
+      );
 
       expect(result.success).toBe(true);
 
       // Each non-drain step should increase pressure
-      result.steps.forEach(step => {
-        if (!step.action.includes('Drain')) {
+      result.steps.forEach((step) => {
+        if (!step.action.includes("Drain")) {
           expect(step.toPressure).toBeGreaterThan(step.fromPressure);
           expect(step.addedPressure).toBeGreaterThan(0);
         }
@@ -572,8 +671,8 @@ describe('Gas Blender - Professional Trimix Calculations', () => {
     });
   });
 
-  describe('Real-World Scenarios', () => {
-    it('should blend bottom gas for 100m dive (14/55)', () => {
+  describe("Real-World Scenarios", () => {
+    it("should blend bottom gas for 100m dive (14/55)", () => {
       const startingGas: TankState = {
         volume: 24, // Twin 12s
         o2: 0,
@@ -587,17 +686,21 @@ describe('Gas Blender - Professional Trimix Calculations', () => {
         pressure: 220,
       };
 
-      const result = calculateBlendingSteps(startingGas, targetGas, standardGases);
+      const result = calculateBlendingSteps(
+        startingGas,
+        targetGas,
+        standardGases,
+      );
 
       expect(result.success).toBe(true);
       expect(result.finalMix.o2).toBeCloseTo(14, 0);
       expect(result.finalMix.he).toBeCloseTo(55, 0);
     });
 
-    it('should blend deco gas (50% nitrox)', () => {
+    it("should blend deco gas (50% nitrox)", () => {
       const decoGases: Gas[] = [
-        {name: 'Air', o2: 21, he: 0, editable: false},
-        {name: 'O2', o2: 100, he: 0, editable: false},
+        { name: "Air", o2: 21, he: 0, editable: false },
+        { name: "O2", o2: 100, he: 0, editable: false },
       ];
 
       const startingGas: TankState = {
@@ -620,7 +723,7 @@ describe('Gas Blender - Professional Trimix Calculations', () => {
       expect(result.finalMix.pressure).toBe(200);
     });
 
-    it('should convert air to 18/45', () => {
+    it("should convert air to 18/45", () => {
       const startingGas: TankState = {
         volume: 12,
         o2: 21,
@@ -634,18 +737,22 @@ describe('Gas Blender - Professional Trimix Calculations', () => {
         pressure: 200,
       };
 
-      const result = calculateBlendingSteps(startingGas, targetGas, standardGases);
+      const result = calculateBlendingSteps(
+        startingGas,
+        targetGas,
+        standardGases,
+      );
 
       expect(result.finalMix.he).toBeCloseTo(45, 0);
       expect(result.finalMix.o2).toBeCloseTo(18, 0);
       expect(result.finalMix.pressure).toBe(200);
       // Should drain first because starting O2 is too high
-      expect(result.steps[0].action).toContain('Drain');
+      expect(result.steps[0].action).toContain("Drain");
     });
   });
 
-  describe('Accuracy and Tolerance', () => {
-    it('should achieve mix within acceptable tolerance', () => {
+  describe("Accuracy and Tolerance", () => {
+    it("should achieve mix within acceptable tolerance", () => {
       const startingGas: TankState = {
         volume: 12,
         o2: 0,
@@ -659,7 +766,11 @@ describe('Gas Blender - Professional Trimix Calculations', () => {
         pressure: 200,
       };
 
-      const result = calculateBlendingSteps(startingGas, targetGas, standardGases);
+      const result = calculateBlendingSteps(
+        startingGas,
+        targetGas,
+        standardGases,
+      );
 
       expect(result.success).toBe(true);
 
@@ -669,9 +780,9 @@ describe('Gas Blender - Professional Trimix Calculations', () => {
     });
   });
 
-  describe('Professional Gas Blending - Critical Safety Tests', () => {
-    describe('Oxygen Toxicity and MOD Verification', () => {
-      it('should correctly blend high-O2 deco gas (80% O2)', () => {
+  describe("Professional Gas Blending - Critical Safety Tests", () => {
+    describe("Oxygen Toxicity and MOD Verification", () => {
+      it("should correctly blend high-O2 deco gas (80% O2)", () => {
         const startingGas: TankState = {
           volume: 7,
           o2: 0,
@@ -685,7 +796,11 @@ describe('Gas Blender - Professional Trimix Calculations', () => {
           pressure: 200,
         };
 
-        const result = calculateBlendingSteps(startingGas, targetGas, standardGases);
+        const result = calculateBlendingSteps(
+          startingGas,
+          targetGas,
+          standardGases,
+        );
 
         expect(result.success).toBe(true);
         // O2 at 80% should be within ±0.5% for safety
@@ -693,9 +808,9 @@ describe('Gas Blender - Professional Trimix Calculations', () => {
         expect(result.finalMix.pressure).toBe(200);
       });
 
-      it('should blend pure O2 for decompression', () => {
+      it("should blend pure O2 for decompression", () => {
         const oxygenGases: Gas[] = [
-          {name: 'O2', o2: 100, he: 0, editable: false},
+          { name: "O2", o2: 100, he: 0, editable: false },
         ];
 
         const startingGas: TankState = {
@@ -711,14 +826,18 @@ describe('Gas Blender - Professional Trimix Calculations', () => {
           pressure: 200,
         };
 
-        const result = calculateBlendingSteps(startingGas, targetGas, oxygenGases);
+        const result = calculateBlendingSteps(
+          startingGas,
+          targetGas,
+          oxygenGases,
+        );
 
         expect(result.success).toBe(true);
         expect(result.finalMix.o2).toBe(100);
         expect(result.steps.length).toBe(1);
       });
 
-      it('should handle hypoxic mix (10/70) - not breathable at surface', () => {
+      it("should handle hypoxic mix (10/70) - not breathable at surface", () => {
         const startingGas: TankState = {
           volume: 12,
           o2: 0,
@@ -732,7 +851,11 @@ describe('Gas Blender - Professional Trimix Calculations', () => {
           pressure: 200,
         };
 
-        const result = calculateBlendingSteps(startingGas, targetGas, standardGases);
+        const result = calculateBlendingSteps(
+          startingGas,
+          targetGas,
+          standardGases,
+        );
 
         expect(result.success).toBe(true);
         // Critical: O2 must be accurate for hypoxic mix
@@ -741,8 +864,8 @@ describe('Gas Blender - Professional Trimix Calculations', () => {
       });
     });
 
-    describe('Precision Requirements - Technical Diving Standards', () => {
-      it('should achieve O2 within ±0.5% for technical trimix', () => {
+    describe("Precision Requirements - Technical Diving Standards", () => {
+      it("should achieve O2 within ±0.5% for technical trimix", () => {
         const startingGas: TankState = {
           volume: 12,
           o2: 0,
@@ -756,7 +879,11 @@ describe('Gas Blender - Professional Trimix Calculations', () => {
           pressure: 200,
         };
 
-        const result = calculateBlendingSteps(startingGas, targetGas, standardGases);
+        const result = calculateBlendingSteps(
+          startingGas,
+          targetGas,
+          standardGases,
+        );
 
         expect(result.success).toBe(true);
         // Professional standard: ±0.5% O2 accuracy
@@ -765,7 +892,7 @@ describe('Gas Blender - Professional Trimix Calculations', () => {
         expect(Math.abs(result.finalMix.he - 45)).toBeLessThanOrEqual(2.0);
       });
 
-      it('should achieve exact pressure within ±1 bar', () => {
+      it("should achieve exact pressure within ±1 bar", () => {
         const startingGas: TankState = {
           volume: 12,
           o2: 0,
@@ -779,16 +906,20 @@ describe('Gas Blender - Professional Trimix Calculations', () => {
           pressure: 200,
         };
 
-        const result = calculateBlendingSteps(startingGas, targetGas, standardGases);
+        const result = calculateBlendingSteps(
+          startingGas,
+          targetGas,
+          standardGases,
+        );
 
         expect(result.success).toBe(true);
         expect(Math.abs(result.finalMix.pressure - 200)).toBeLessThanOrEqual(1);
       });
 
-      it('should maintain precision with multiple nitrox blends', () => {
+      it("should maintain precision with multiple nitrox blends", () => {
         const nitroxGases: Gas[] = [
-          {name: 'Air', o2: 21, he: 0, editable: false},
-          {name: 'O2', o2: 100, he: 0, editable: false},
+          { name: "Air", o2: 21, he: 0, editable: false },
+          { name: "O2", o2: 100, he: 0, editable: false },
         ];
 
         // Test EAN36
@@ -805,15 +936,19 @@ describe('Gas Blender - Professional Trimix Calculations', () => {
           pressure: 200,
         };
 
-        const result = calculateBlendingSteps(startingGas, targetGas, nitroxGases);
+        const result = calculateBlendingSteps(
+          startingGas,
+          targetGas,
+          nitroxGases,
+        );
 
         expect(result.success).toBe(true);
         expect(Math.abs(result.finalMix.o2 - 36)).toBeLessThanOrEqual(0.5);
       });
     });
 
-    describe('Complex Mix Conversions', () => {
-      it('should convert 21/35 at 100 bar to 18/45 at 200 bar', () => {
+    describe("Complex Mix Conversions", () => {
+      it("should convert 21/35 at 100 bar to 18/45 at 200 bar", () => {
         const startingGas: TankState = {
           volume: 12,
           o2: 21,
@@ -827,7 +962,11 @@ describe('Gas Blender - Professional Trimix Calculations', () => {
           pressure: 200,
         };
 
-        const result = calculateBlendingSteps(startingGas, targetGas, standardGases);
+        const result = calculateBlendingSteps(
+          startingGas,
+          targetGas,
+          standardGases,
+        );
 
         expect(result.success).toBe(true);
         expect(Math.abs(result.finalMix.o2 - 18)).toBeLessThanOrEqual(0.5);
@@ -838,7 +977,7 @@ describe('Gas Blender - Professional Trimix Calculations', () => {
         // The algorithm might achieve target through adding He and diluting O2
       });
 
-      it('should convert air to EAN32 (common recreational scenario)', () => {
+      it("should convert air to EAN32 (common recreational scenario)", () => {
         const startingGas: TankState = {
           volume: 12,
           o2: 21,
@@ -852,13 +991,17 @@ describe('Gas Blender - Professional Trimix Calculations', () => {
           pressure: 200,
         };
 
-        const result = calculateBlendingSteps(startingGas, targetGas, standardGases);
+        const result = calculateBlendingSteps(
+          startingGas,
+          targetGas,
+          standardGases,
+        );
 
         expect(result.success).toBe(true);
         expect(Math.abs(result.finalMix.o2 - 32)).toBeLessThanOrEqual(0.5);
       });
 
-      it('should convert EAN32 at 150 bar to air at 200 bar', () => {
+      it("should convert EAN32 at 150 bar to air at 200 bar", () => {
         const startingGas: TankState = {
           volume: 12,
           o2: 32,
@@ -872,7 +1015,11 @@ describe('Gas Blender - Professional Trimix Calculations', () => {
           pressure: 200,
         };
 
-        const result = calculateBlendingSteps(startingGas, targetGas, standardGases);
+        const result = calculateBlendingSteps(
+          startingGas,
+          targetGas,
+          standardGases,
+        );
 
         // This requires diluting with air
         if (result.success) {
@@ -881,8 +1028,8 @@ describe('Gas Blender - Professional Trimix Calculations', () => {
       });
     });
 
-    describe('High Pressure Tanks', () => {
-      it('should handle 300 bar fill (HP steel tanks)', () => {
+    describe("High Pressure Tanks", () => {
+      it("should handle 300 bar fill (HP steel tanks)", () => {
         const startingGas: TankState = {
           volume: 12,
           o2: 0,
@@ -896,14 +1043,18 @@ describe('Gas Blender - Professional Trimix Calculations', () => {
           pressure: 300,
         };
 
-        const result = calculateBlendingSteps(startingGas, targetGas, standardGases);
+        const result = calculateBlendingSteps(
+          startingGas,
+          targetGas,
+          standardGases,
+        );
 
         expect(result.success).toBe(true);
         expect(result.finalMix.pressure).toBe(300);
         expect(Math.abs(result.finalMix.o2 - 18)).toBeLessThanOrEqual(0.5);
       });
 
-      it('should handle 232 bar fill (European standard)', () => {
+      it("should handle 232 bar fill (European standard)", () => {
         const startingGas: TankState = {
           volume: 12,
           o2: 0,
@@ -917,19 +1068,23 @@ describe('Gas Blender - Professional Trimix Calculations', () => {
           pressure: 232,
         };
 
-        const result = calculateBlendingSteps(startingGas, targetGas, standardGases);
+        const result = calculateBlendingSteps(
+          startingGas,
+          targetGas,
+          standardGases,
+        );
 
         expect(result.success).toBe(true);
         expect(result.finalMix.pressure).toBe(232);
       });
     });
 
-    describe('Impure Source Gases', () => {
-      it('should handle industrial oxygen (99.5% O2)', () => {
+    describe("Impure Source Gases", () => {
+      it("should handle industrial oxygen (99.5% O2)", () => {
         const industrialGases: Gas[] = [
-          {name: 'Air', o2: 21, he: 0, editable: false},
-          {name: 'Industrial O2', o2: 99.5, he: 0, editable: false},
-          {name: 'Helium', o2: 0, he: 100, editable: false},
+          { name: "Air", o2: 21, he: 0, editable: false },
+          { name: "Industrial O2", o2: 99.5, he: 0, editable: false },
+          { name: "Helium", o2: 0, he: 100, editable: false },
         ];
 
         const startingGas: TankState = {
@@ -945,7 +1100,11 @@ describe('Gas Blender - Professional Trimix Calculations', () => {
           pressure: 200,
         };
 
-        const result = calculateBlendingSteps(startingGas, targetGas, industrialGases);
+        const result = calculateBlendingSteps(
+          startingGas,
+          targetGas,
+          industrialGases,
+        );
 
         // Should still get close to target
         if (result.success) {
@@ -953,11 +1112,11 @@ describe('Gas Blender - Professional Trimix Calculations', () => {
         }
       });
 
-      it('should handle commercial helium with trace oxygen', () => {
+      it("should handle commercial helium with trace oxygen", () => {
         const commercialGases: Gas[] = [
-          {name: 'Air', o2: 21, he: 0, editable: false},
-          {name: 'O2', o2: 100, he: 0, editable: false},
-          {name: 'Commercial He', o2: 0.5, he: 99.5, editable: false},
+          { name: "Air", o2: 21, he: 0, editable: false },
+          { name: "O2", o2: 100, he: 0, editable: false },
+          { name: "Commercial He", o2: 0.5, he: 99.5, editable: false },
         ];
 
         const startingGas: TankState = {
@@ -973,7 +1132,11 @@ describe('Gas Blender - Professional Trimix Calculations', () => {
           pressure: 200,
         };
 
-        const result = calculateBlendingSteps(startingGas, targetGas, commercialGases);
+        const result = calculateBlendingSteps(
+          startingGas,
+          targetGas,
+          commercialGases,
+        );
 
         // Trace O2 in He might affect final mix slightly
         if (result.success) {
@@ -982,14 +1145,14 @@ describe('Gas Blender - Professional Trimix Calculations', () => {
       });
     });
 
-    describe('Multiple Nitrox Banks', () => {
-      it('should optimize blend using multiple nitrox mixes', () => {
+    describe("Multiple Nitrox Banks", () => {
+      it("should optimize blend using multiple nitrox mixes", () => {
         const multiNitroxGases: Gas[] = [
-          {name: 'Air', o2: 21, he: 0, editable: false},
-          {name: 'EAN28', o2: 28, he: 0, editable: false},
-          {name: 'EAN32', o2: 32, he: 0, editable: false},
-          {name: 'EAN36', o2: 36, he: 0, editable: false},
-          {name: 'O2', o2: 100, he: 0, editable: false},
+          { name: "Air", o2: 21, he: 0, editable: false },
+          { name: "EAN28", o2: 28, he: 0, editable: false },
+          { name: "EAN32", o2: 32, he: 0, editable: false },
+          { name: "EAN36", o2: 36, he: 0, editable: false },
+          { name: "O2", o2: 100, he: 0, editable: false },
         ];
 
         const startingGas: TankState = {
@@ -1005,19 +1168,23 @@ describe('Gas Blender - Professional Trimix Calculations', () => {
           pressure: 200,
         };
 
-        const result = calculateBlendingSteps(startingGas, targetGas, multiNitroxGases);
+        const result = calculateBlendingSteps(
+          startingGas,
+          targetGas,
+          multiNitroxGases,
+        );
 
         expect(result.success).toBe(true);
         expect(Math.abs(result.finalMix.o2 - 32)).toBeLessThanOrEqual(0.5);
 
         // Should ideally use EAN32 directly
-        const ean32Step = result.steps.find(s => s.gas === 'EAN32');
+        const ean32Step = result.steps.find((s) => s.gas === "EAN32");
         expect(ean32Step).toBeDefined();
       });
     });
 
-    describe('Partial Pressure Blending Edge Cases', () => {
-      it('should handle very low starting pressure (1 bar residual)', () => {
+    describe("Partial Pressure Blending Edge Cases", () => {
+      it("should handle very low starting pressure (1 bar residual)", () => {
         const startingGas: TankState = {
           volume: 12,
           o2: 21,
@@ -1031,13 +1198,17 @@ describe('Gas Blender - Professional Trimix Calculations', () => {
           pressure: 200,
         };
 
-        const result = calculateBlendingSteps(startingGas, targetGas, standardGases);
+        const result = calculateBlendingSteps(
+          startingGas,
+          targetGas,
+          standardGases,
+        );
 
         expect(result.success).toBe(true);
         expect(Math.abs(result.finalMix.o2 - 32)).toBeLessThanOrEqual(0.5);
       });
 
-      it('should handle odd target pressures (187 bar)', () => {
+      it("should handle odd target pressures (187 bar)", () => {
         const startingGas: TankState = {
           volume: 12,
           o2: 0,
@@ -1051,7 +1222,11 @@ describe('Gas Blender - Professional Trimix Calculations', () => {
           pressure: 187,
         };
 
-        const result = calculateBlendingSteps(startingGas, targetGas, standardGases);
+        const result = calculateBlendingSteps(
+          startingGas,
+          targetGas,
+          standardGases,
+        );
 
         expect(result.success).toBe(true);
         // Algorithm has 0.1 bar rounding precision
@@ -1059,8 +1234,8 @@ describe('Gas Blender - Professional Trimix Calculations', () => {
       });
     });
 
-    describe('Rounding Error Accumulation', () => {
-      it('should not accumulate rounding errors in multi-step blend', () => {
+    describe("Rounding Error Accumulation", () => {
+      it("should not accumulate rounding errors in multi-step blend", () => {
         const startingGas: TankState = {
           volume: 12,
           o2: 0,
@@ -1074,27 +1249,35 @@ describe('Gas Blender - Professional Trimix Calculations', () => {
           pressure: 200,
         };
 
-        const result = calculateBlendingSteps(startingGas, targetGas, standardGases);
+        const result = calculateBlendingSteps(
+          startingGas,
+          targetGas,
+          standardGases,
+        );
 
         // Verify partial pressures add up correctly
         const finalO2PP = (result.finalMix.o2 / 100) * result.finalMix.pressure;
         const finalHePP = (result.finalMix.he / 100) * result.finalMix.pressure;
-        const finalN2PP = ((100 - result.finalMix.o2 - result.finalMix.he) / 100) * result.finalMix.pressure;
+        const finalN2PP =
+          ((100 - result.finalMix.o2 - result.finalMix.he) / 100) *
+          result.finalMix.pressure;
 
         const totalPP = finalO2PP + finalHePP + finalN2PP;
 
         // Total partial pressures should equal final pressure within rounding
-        expect(Math.abs(totalPP - result.finalMix.pressure)).toBeLessThanOrEqual(0.2);
+        expect(
+          Math.abs(totalPP - result.finalMix.pressure),
+        ).toBeLessThanOrEqual(0.2);
       });
     });
 
-    describe('Sequential Blending Operations', () => {
-      it('should handle topping the same tank twice', () => {
+    describe("Sequential Blending Operations", () => {
+      it("should handle topping the same tank twice", () => {
         // First fill to 100 bar
         const firstBlend = calculateBlendingSteps(
-          {volume: 12, o2: 0, he: 0, pressure: 0},
-          {o2: 21, he: 35, pressure: 100},
-          standardGases
+          { volume: 12, o2: 0, he: 0, pressure: 0 },
+          { o2: 21, he: 35, pressure: 100 },
+          standardGases,
         );
 
         expect(firstBlend.success).toBe(true);
@@ -1105,10 +1288,10 @@ describe('Gas Blender - Professional Trimix Calculations', () => {
             volume: 12,
             o2: firstBlend.finalMix.o2,
             he: firstBlend.finalMix.he,
-            pressure: firstBlend.finalMix.pressure
+            pressure: firstBlend.finalMix.pressure,
           },
-          {o2: 21, he: 35, pressure: 200},
-          standardGases
+          { o2: 21, he: 35, pressure: 200 },
+          standardGases,
         );
 
         expect(secondBlend.success).toBe(true);
@@ -1117,8 +1300,8 @@ describe('Gas Blender - Professional Trimix Calculations', () => {
       });
     });
 
-    describe('Extreme Mix Scenarios', () => {
-      it('should blend very lean trimix (8/84)', () => {
+    describe("Extreme Mix Scenarios", () => {
+      it("should blend very lean trimix (8/84)", () => {
         const startingGas: TankState = {
           volume: 12,
           o2: 0,
@@ -1132,14 +1315,18 @@ describe('Gas Blender - Professional Trimix Calculations', () => {
           pressure: 200,
         };
 
-        const result = calculateBlendingSteps(startingGas, targetGas, standardGases);
+        const result = calculateBlendingSteps(
+          startingGas,
+          targetGas,
+          standardGases,
+        );
 
         expect(result.success).toBe(true);
         expect(Math.abs(result.finalMix.o2 - 8)).toBeLessThanOrEqual(0.5);
         expect(Math.abs(result.finalMix.he - 84)).toBeLessThanOrEqual(2.0);
       });
 
-      it('should blend rich travel mix (30/30)', () => {
+      it("should blend rich travel mix (30/30)", () => {
         const startingGas: TankState = {
           volume: 12,
           o2: 0,
@@ -1153,7 +1340,11 @@ describe('Gas Blender - Professional Trimix Calculations', () => {
           pressure: 200,
         };
 
-        const result = calculateBlendingSteps(startingGas, targetGas, standardGases);
+        const result = calculateBlendingSteps(
+          startingGas,
+          targetGas,
+          standardGases,
+        );
 
         expect(result.success).toBe(true);
         expect(Math.abs(result.finalMix.o2 - 30)).toBeLessThanOrEqual(0.5);

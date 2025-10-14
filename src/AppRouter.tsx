@@ -1,7 +1,14 @@
-import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom'
-import GasBlender from './GasBlender.tsx'
-import TankCalculator from './TankCalculator.tsx'
-import './App.css'
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  Navigate,
+  useNavigate,
+  useLocation,
+} from "react-router-dom";
+import GasBlender from "./GasBlender.tsx";
+import TankCalculator from "./TankCalculator.tsx";
+import "./App.css";
 
 function App() {
   const navigate = useNavigate();
@@ -14,17 +21,14 @@ function App() {
   };
 
   // Determine which page we're on and what the other tool is
-  const isOnBlender = currentPath.endsWith('/blender.html');
-  const otherTool = isOnBlender ? 'tanks.html' : 'blender.html';
-  const otherToolName = isOnBlender ? 'Tank Calculator' : 'Gas Blender';
+  const isOnBlender = currentPath.endsWith("/blender.html");
+  const otherTool = isOnBlender ? "tanks.html" : "blender.html";
+  const otherToolName = isOnBlender ? "Tank Calculator" : "Gas Blender";
 
   return (
     <div className="app">
       <div className="page-switcher">
-        <a
-          onClick={() => handleNavigation(otherTool)}
-          className="page-link"
-        >
+        <a onClick={() => handleNavigation(otherTool)} className="page-link">
           ← {otherToolName}
         </a>
       </div>
@@ -51,14 +55,15 @@ function App() {
             </a>
           </p>
           <p className="footer-license">
-            Licensed under <a
-            href="https://www.gnu.org/licenses/gpl-3.0.en.html"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="footer-link"
-          >
-            GPLv3
-          </a>
+            Licensed under{" "}
+            <a
+              href="https://www.gnu.org/licenses/gpl-3.0.en.html"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="footer-link"
+            >
+              GPLv3
+            </a>
           </p>
         </div>
       </footer>
@@ -70,7 +75,7 @@ function AppRouter() {
   // Auto-detect the base path from the current URL
   // Extract everything before the last .html file
   const pathname = window.location.pathname;
-  const basename = pathname.substring(0, pathname.lastIndexOf('/') + 1) || '/';
+  const basename = pathname.substring(0, pathname.lastIndexOf("/") + 1) || "/";
 
   return (
     <BrowserRouter basename={basename}>
