@@ -20,9 +20,6 @@
     "vite": "npm:rolldown-vite@^7.1.14",
     "vitest": "^3.2.4"
   },
-  "overrides": {
-    "vite": "npm:rolldown-vite@7.1.14"
-  },
   "dependencies": {
     "@vitejs/plugin-react": "^5.0.4",
     "react": "^19.2.0",
