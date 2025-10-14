@@ -9,7 +9,9 @@ import "./App.css";
 
 const tankIllustrations = {
   full: "/tanks-full.svg",
-  empty: "/tanks-empty.svg"
+  empty: "/tanks-empty.svg",
+  singleFull: "/tank-full.svg",
+  singleEmpty: "/tank-empty.svg"
 } as const;
 
 function TankCalculator() {
@@ -596,7 +598,7 @@ function TankCalculator() {
               <div className="buoyancy-panels">
                 <div className="buoyancy-panel">
                   <img
-                    src={tankIllustrations.full}
+                    src={isDoubles ? tankIllustrations.full : tankIllustrations.singleFull}
                     className="tank-illustration"
                     alt=""
                     aria-hidden="true"
@@ -611,7 +613,7 @@ function TankCalculator() {
                 </div>
                 <div className="buoyancy-panel">
                   <img
-                    src={tankIllustrations.empty}
+                    src={isDoubles ? tankIllustrations.empty : tankIllustrations.singleEmpty}
                     className="tank-illustration"
                     alt=""
                     aria-hidden="true"
