@@ -33,6 +33,7 @@ function GasBlender() {
     "Nitrox 32": false,
     "10/70": false,
   });
+  const [gasError, setGasError] = useState<string | null>(null);
 
   // Results
   const [blendingSteps, setBlendingSteps] = useState<ReturnType<
@@ -102,32 +103,67 @@ function GasBlender() {
 
   const toggleGas = (gasName: string) => {
     setSelectedGases((prev) => ({ ...prev, [gasName]: !prev[gasName] }));
+    setGasError(null);
   };
+
+  const gasExists = (o2: number, he: number, ignoreIndex?: number): boolean =>
+    availableGases.some((gas, index) => index !== ignoreIndex && gas.o2 === o2 && gas.he === he);
 
   const updateGas = (
     index: number,
     field: "name" | "o2" | "he",
     value: string | number,
   ) => {
-    const newGases = [...availableGases];
-    if (field === "name") {
-      newGases[index] = { ...newGases[index], name: value as string };
-    } else {
-      const updatedGas = {
-        ...newGases[index],
-        [field]: parseFloat(value.toString()),
-      };
-      // Update the name to match the O2/He values if it's an editable gas
-      if (updatedGas.editable) {
-        if (updatedGas.he === 0 && updatedGas.o2 > 21 && updatedGas.o2 < 41) {
-          updatedGas.name = `Nitrox ${updatedGas.o2}`;
-        } else {
-          updatedGas.name = `${updatedGas.o2}/${updatedGas.he}`;
+    setAvailableGases((prevGases) => {
+      const gasToUpdate = prevGases[index];
+      if (!gasToUpdate) {
+        return prevGases;
+      }
+
+      const newGases = [...prevGases];
+      const previousName = gasToUpdate.name;
+      let nextGas: Gas;
+
+      if (field === "name") {
+        nextGas = { ...gasToUpdate, name: value as string };
+      } else {
+        const numericValue = parseFloat(value.toString());
+        nextGas = {
+          ...gasToUpdate,
+          [field]: numericValue,
+        };
+
+        if (nextGas.editable) {
+          if (nextGas.he === 0 && nextGas.o2 > 21 && nextGas.o2 < 41) {
+            nextGas.name = `Nitrox ${nextGas.o2}`;
+          } else {
+            nextGas.name = `${nextGas.o2}/${nextGas.he}`;
+          }
+        }
+
+        const duplicateExists = prevGases.some(
+          (gas, idx) => idx !== index && gas.o2 === nextGas.o2 && gas.he === nextGas.he,
+        );
+
+        if (duplicateExists) {
+          setGasError(`Gas ${nextGas.o2}/${nextGas.he} already exists.`);
+          return prevGases;
         }
       }
-      newGases[index] = updatedGas;
-    }
-    setAvailableGases(newGases);
+
+      newGases[index] = nextGas;
+      setGasError(null);
+
+      if (previousName !== nextGas.name) {
+        setSelectedGases((prevSelected) => {
+          const wasSelected = prevSelected[previousName] ?? false;
+          const { [previousName]: _removed, ...rest } = prevSelected;
+          return { ...rest, [nextGas.name]: wasSelected };
+        });
+      }
+
+      return newGases;
+    });
   };
 
   const addCustomGas = () => {
@@ -137,19 +173,36 @@ function GasBlender() {
       he: 0,
       editable: true,
     };
+    if (gasExists(newGas.o2, newGas.he)) {
+      setGasError(`Gas ${newGas.o2}/${newGas.he} already exists.`);
+      return;
+    }
+
     setAvailableGases([...availableGases, newGas]);
     setSelectedGases({ ...selectedGases, [newGas.name]: true });
+    setGasError(null);
   };
 
   const removeGas = (index: number) => {
+    const gasToRemove = availableGases[index];
+    if (!gasToRemove) {
+      return;
+    }
+
     const newGases = availableGases.filter((_, i) => i !== index);
     setAvailableGases(newGases);
+    setSelectedGases((prev) => {
+      const { [gasToRemove.name]: _removed, ...rest } = prev;
+      return rest;
+    });
+    setGasError(null);
   };
 
   const handleEmpty = () => {
     setStartPressure(0);
     setStartO2(0);
     setStartHe(0);
+    setBlendingSteps(null);
   };
 
   return (
@@ -317,6 +370,7 @@ function GasBlender() {
               </div>
             ))}
           </div>
+          {gasError && <div className="error">{gasError}</div>}
           <button onClick={addCustomGas} className="add-gas-btn">
             + Add Custom Gas
           </button>
