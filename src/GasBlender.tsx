@@ -107,7 +107,12 @@ function GasBlender() {
   };
 
   const gasExists = (o2: number, he: number, ignoreIndex?: number): boolean =>
-    availableGases.some((gas, index) => index !== ignoreIndex && gas.o2 === o2 && gas.he === he);
+    Number.isFinite(o2) &&
+    Number.isFinite(he) &&
+    availableGases.some(
+      (gas, index) =>
+        index !== ignoreIndex && Number.isFinite(gas.o2) && Number.isFinite(gas.he) && gas.o2 === o2 && gas.he === he,
+    );
 
   const updateGas = (
     index: number,
@@ -133,7 +138,9 @@ function GasBlender() {
           [field]: numericValue,
         };
 
-        if (nextGas.editable) {
+        const hasValidMix = Number.isFinite(nextGas.o2) && Number.isFinite(nextGas.he);
+
+        if (nextGas.editable && hasValidMix) {
           if (nextGas.he === 0 && nextGas.o2 > 21 && nextGas.o2 < 41) {
             nextGas.name = `Nitrox ${nextGas.o2}`;
           } else {
@@ -141,13 +148,15 @@ function GasBlender() {
           }
         }
 
-        const duplicateExists = prevGases.some(
-          (gas, idx) => idx !== index && gas.o2 === nextGas.o2 && gas.he === nextGas.he,
-        );
+        if (hasValidMix) {
+          const duplicateExists = prevGases.some(
+            (gas, idx) => idx !== index && gas.o2 === nextGas.o2 && gas.he === nextGas.he,
+          );
 
-        if (duplicateExists) {
-          setGasError(`Gas ${nextGas.o2}/${nextGas.he} already exists.`);
-          return prevGases;
+          if (duplicateExists) {
+            setGasError(`Gas ${nextGas.o2}/${nextGas.he} already exists.`);
+            return prevGases;
+          }
         }
       }
 
@@ -167,26 +176,20 @@ function GasBlender() {
   };
 
   const addCustomGas = () => {
-    let newGas: Gas | null = null;
+    setAvailableGases((prevGases) => {
+      const customCount = prevGases.filter((gas) => gas.editable).length + 1;
+      const newGas: Gas = {
+        name: `Custom Gas ${customCount}`,
+        o2: Number.NaN,
+        he: Number.NaN,
+        editable: true,
+      };
 
-    outer: for (let o2 = 0; o2 <= 100; o2 += 1) {
-      for (let he = 0; he <= 100 - o2; he += 1) {
-        if (!gasExists(o2, he)) {
-          const name = he === 0 && o2 > 21 && o2 < 41 ? `Nitrox ${o2}` : `${o2}/${he}`;
-          newGas = { name, o2, he, editable: true };
-          break outer;
-        }
-      }
-    }
+      setSelectedGases((prevSelected) => ({ ...prevSelected, [newGas.name]: true }));
+      setGasError(null);
 
-    if (!newGas) {
-      setGasError("Unable to create a unique custom gas mix.");
-      return;
-    }
-
-  setAvailableGases((prev) => [...prev, newGas]);
-  setSelectedGases((prev) => ({ ...prev, [newGas.name]: true }));
-    setGasError(null);
+      return [...prevGases, newGas];
+    });
   };
 
   const removeGas = (index: number) => {
@@ -346,7 +349,7 @@ function GasBlender() {
                   <div className="gas-inputs">
                     <input
                       type="number"
-                      value={gas.o2}
+                      value={Number.isNaN(gas.o2) ? "" : gas.o2}
                       onChange={(e) => updateGas(index, "o2", e.target.value)}
                       className="gas-percent-input"
                       min="0"
@@ -355,7 +358,7 @@ function GasBlender() {
                     <span>/</span>
                     <input
                       type="number"
-                      value={gas.he}
+                      value={Number.isNaN(gas.he) ? "" : gas.he}
                       onChange={(e) => updateGas(index, "he", e.target.value)}
                       className="gas-percent-input"
                       min="0"
