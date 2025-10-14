@@ -35,6 +35,14 @@ function GasBlender() {
   });
   const [gasError, setGasError] = useState<string | null>(null);
 
+  const isGasValid = (gas: Gas): boolean =>
+    Number.isFinite(gas.o2) &&
+    Number.isFinite(gas.he) &&
+    gas.o2 >= 0 &&
+    gas.he >= 0 &&
+    gas.o2 + gas.he <= 100 &&
+    (gas.o2 > 0 || gas.he > 0);
+
   // Results
   const [blendingSteps, setBlendingSteps] = useState<ReturnType<
     typeof calculateBlendingSteps
@@ -96,23 +104,20 @@ function GasBlender() {
       pressure: parseFloat(targetPressure.toString()),
     };
 
-    const selected = availableGases.filter((gas) => selectedGases[gas.name]);
+    const selected = availableGases.filter((gas) => isGasValid(gas) && selectedGases[gas.name]);
     const result = calculateBlendingSteps(startingGas, targetGas, selected);
     setBlendingSteps(result);
   };
 
-  const toggleGas = (gasName: string) => {
-    setSelectedGases((prev) => ({ ...prev, [gasName]: !prev[gasName] }));
+  const toggleGas = (gas: Gas) => {
+    if (!isGasValid(gas)) {
+      setGasError("Enter valid O₂/He values before selecting this gas.");
+      return;
+    }
+
+    setSelectedGases((prev) => ({ ...prev, [gas.name]: !prev[gas.name] }));
     setGasError(null);
   };
-
-  const gasExists = (o2: number, he: number, ignoreIndex?: number): boolean =>
-    Number.isFinite(o2) &&
-    Number.isFinite(he) &&
-    availableGases.some(
-      (gas, index) =>
-        index !== ignoreIndex && Number.isFinite(gas.o2) && Number.isFinite(gas.he) && gas.o2 === o2 && gas.he === he,
-    );
 
   const updateGas = (
     index: number,
@@ -131,45 +136,72 @@ function GasBlender() {
 
       if (field === "name") {
         nextGas = { ...gasToUpdate, name: value as string };
-      } else {
-        const numericValue = parseFloat(value.toString());
-        nextGas = {
-          ...gasToUpdate,
-          [field]: numericValue,
-        };
+        newGases[index] = nextGas;
+        setGasError(null);
 
-        const hasValidMix = Number.isFinite(nextGas.o2) && Number.isFinite(nextGas.he);
-
-        if (nextGas.editable && hasValidMix) {
-          if (nextGas.he === 0 && nextGas.o2 > 21 && nextGas.o2 < 41) {
-            nextGas.name = `Nitrox ${nextGas.o2}`;
-          } else {
-            nextGas.name = `${nextGas.o2}/${nextGas.he}`;
-          }
+        if (previousName !== nextGas.name) {
+          setSelectedGases((prevSelected) => {
+            const wasSelected = prevSelected[previousName] ?? false;
+            const { [previousName]: _removed, ...rest } = prevSelected;
+            return { ...rest, [nextGas.name]: wasSelected };
+          });
         }
 
-        if (hasValidMix) {
-          const duplicateExists = prevGases.some(
-            (gas, idx) => idx !== index && gas.o2 === nextGas.o2 && gas.he === nextGas.he,
-          );
+        return newGases;
+      }
 
-          if (duplicateExists) {
-            setGasError(`Gas ${nextGas.o2}/${nextGas.he} already exists.`);
-            return prevGases;
-          }
+      const rawValue = typeof value === "string" ? value : value.toString();
+      const numericValue = rawValue.trim() === "" ? Number.NaN : parseFloat(rawValue);
+
+      nextGas = {
+        ...gasToUpdate,
+        [field]: numericValue,
+      };
+
+      const validMix = isGasValid(nextGas);
+
+      if (validMix) {
+        const duplicateExists = prevGases.some(
+          (gas, idx) => idx !== index && gas.o2 === nextGas.o2 && gas.he === nextGas.he,
+        );
+
+        if (duplicateExists) {
+          setGasError(`Gas ${nextGas.o2}/${nextGas.he} already exists.`);
+          return prevGases;
         }
+      }
+
+      if (nextGas.editable && validMix) {
+        let derivedName: string;
+        if (nextGas.he === 0 && nextGas.o2 > 21 && nextGas.o2 < 41) {
+          derivedName = `Nitrox ${nextGas.o2}`;
+        } else {
+          derivedName = `${nextGas.o2}/${nextGas.he}`;
+        }
+
+        nextGas = { ...nextGas, name: derivedName };
       }
 
       newGases[index] = nextGas;
       setGasError(null);
 
-      if (previousName !== nextGas.name) {
-        setSelectedGases((prevSelected) => {
-          const wasSelected = prevSelected[previousName] ?? false;
-          const { [previousName]: _removed, ...rest } = prevSelected;
-          return { ...rest, [nextGas.name]: wasSelected };
-        });
-      }
+      setSelectedGases((prevSelected) => {
+        const updated = { ...prevSelected };
+        const oldName = previousName;
+        const newName = nextGas.name;
+        const wasSelected = updated[oldName] ?? false;
+
+        if (oldName !== newName) {
+          delete updated[oldName];
+          updated[newName] = validMix ? wasSelected : false;
+        } else if (!validMix && wasSelected) {
+          updated[oldName] = false;
+        } else if (!(newName in updated)) {
+          updated[newName] = false;
+        }
+
+        return updated;
+      });
 
       return newGases;
     });
@@ -177,15 +209,23 @@ function GasBlender() {
 
   const addCustomGas = () => {
     setAvailableGases((prevGases) => {
-      const customCount = prevGases.filter((gas) => gas.editable).length + 1;
+      const existingNames = new Set(prevGases.map((gas) => gas.name));
+      let suffix = 1;
+      let name = "Custom Gas";
+
+      while (existingNames.has(name)) {
+        name = `Custom Gas ${suffix}`;
+        suffix += 1;
+      }
+
       const newGas: Gas = {
-        name: `Custom Gas ${customCount}`,
+        name,
         o2: Number.NaN,
         he: Number.NaN,
         editable: true,
       };
 
-      setSelectedGases((prevSelected) => ({ ...prevSelected, [newGas.name]: true }));
+      setSelectedGases((prevSelected) => ({ ...prevSelected, [newGas.name]: false }));
       setGasError(null);
 
       return [...prevGases, newGas];
@@ -336,48 +376,53 @@ function GasBlender() {
         <div className="card">
           <h2>Available Gases</h2>
           <div className="gases-container">
-            {availableGases.map((gas, index) => (
-              <div key={index} className="gas-item">
-                <label className="gas-checkbox">
-                  <input
-                    type="checkbox"
-                    checked={selectedGases[gas.name] || false}
-                    onChange={() => toggleGas(gas.name)}
-                  />
-                </label>
-                {gas.editable ? (
-                  <div className="gas-inputs">
+            {availableGases.map((gas, index) => {
+              const validGas = isGasValid(gas);
+
+              return (
+                <div key={index} className="gas-item">
+                  <label className="gas-checkbox">
                     <input
-                      type="number"
-                      value={Number.isNaN(gas.o2) ? "" : gas.o2}
-                      onChange={(e) => updateGas(index, "o2", e.target.value)}
-                      className="gas-percent-input"
-                      min="0"
-                      max="100"
+                      type="checkbox"
+                      checked={validGas ? selectedGases[gas.name] || false : false}
+                      disabled={!validGas}
+                      onChange={() => toggleGas(gas)}
                     />
-                    <span>/</span>
-                    <input
-                      type="number"
-                      value={Number.isNaN(gas.he) ? "" : gas.he}
-                      onChange={(e) => updateGas(index, "he", e.target.value)}
-                      className="gas-percent-input"
-                      min="0"
-                      max="100"
-                    />
-                    <button
-                      onClick={() => removeGas(index)}
-                      className="remove-gas-btn"
-                    >
-                      ✕
-                    </button>
-                  </div>
-                ) : (
-                  <span className="gas-label">
-                    {gas.name} ({gas.o2}/{gas.he})
-                  </span>
-                )}
-              </div>
-            ))}
+                  </label>
+                  {gas.editable ? (
+                    <div className="gas-inputs">
+                      <input
+                        type="number"
+                        value={Number.isNaN(gas.o2) ? "" : gas.o2}
+                        onChange={(e) => updateGas(index, "o2", e.target.value)}
+                        className="gas-percent-input"
+                        min="0"
+                        max="100"
+                      />
+                      <span>/</span>
+                      <input
+                        type="number"
+                        value={Number.isNaN(gas.he) ? "" : gas.he}
+                        onChange={(e) => updateGas(index, "he", e.target.value)}
+                        className="gas-percent-input"
+                        min="0"
+                        max="100"
+                      />
+                      <button
+                        onClick={() => removeGas(index)}
+                        className="remove-gas-btn"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ) : (
+                    <span className="gas-label">
+                      {gas.name} ({gas.o2}/{gas.he})
+                    </span>
+                  )}
+                </div>
+              );
+            })}
           </div>
           {gasError && <div className="error">{gasError}</div>}
           <button onClick={addCustomGas} className="add-gas-btn">
