@@ -1,3 +1,9 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
 .app {
   min-height: 100vh;
   padding: 1rem;
@@ -28,6 +34,7 @@
 
 .container {
   max-width: 900px;
+  width: 100%;
   margin: 0 auto;
   padding-bottom: 2rem;
 }
@@ -98,6 +105,7 @@ h1 {
 }
 
 .form-group input {
+  width: 100%;
   padding: 0.75rem;
   border: 2px solid #e0e0e0;
   border-radius: 8px;
@@ -508,6 +516,7 @@ h1 {
   background: white;
   cursor: pointer;
   transition: border-color 0.2s;
+  box-sizing: border-box;
 }
 
 .predefined-select:focus {
