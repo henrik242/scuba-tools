@@ -36,8 +36,8 @@ function TankCalculator() {
 
   const formatBuoyancy = (kgValue: number, lbsValue: number) =>
     useMetric
-      ? `${kgValue.toFixed(1)} kg (${lbsValue.toFixed(1)} lbs)`
-      : `${lbsValue.toFixed(1)} lbs (${kgValue.toFixed(1)} kg)`;
+      ? `${kgValue.toFixed(1)} kg`
+      : `${lbsValue.toFixed(1)} lbs`;
 
   // Load state from URL on mount
   useEffect(() => {
