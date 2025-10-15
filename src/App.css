@@ -79,6 +79,12 @@ h1 {
   margin-bottom: 1rem;
 }
 
+@media (min-width: 768px) {
+  .form-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
 .form-group {
   display: flex;
   flex-direction: column;
@@ -313,7 +319,7 @@ h1 {
   color: #dc3545;
   text-align: center;
   font-size: 1.1rem;
-  padding: 2rem;
+  padding: 1rem;
   background: #f8d7da;
   border-radius: 8px;
 }
@@ -322,20 +328,20 @@ h1 {
   text-align: center;
   color: #28a745;
   font-size: 1.1rem;
-  padding: 2rem;
+  padding: 1rem;
 }
 
 .steps-list {
-  margin-bottom: 2rem;
+  margin-bottom: 1rem;
 }
 
 .step {
   display: flex;
-  gap: 1rem;
-  padding: 1rem;
+  gap: 0.5rem;
+  padding: 0.5rem;
   background: #f8f9fa;
-  border-radius: 8px;
-  margin-bottom: 1rem;
+  border-radius: 4px;
+  margin-bottom: 0.5rem;
   border-left: 4px solid #667eea;
 }
 
