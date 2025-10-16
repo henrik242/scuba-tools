@@ -16,7 +16,11 @@
   --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.1);
   --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   --shadow-lg: 0 6px 12px rgba(0, 0, 0, 0.15);
-  --gradient: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+  --gradient: linear-gradient(
+    135deg,
+    var(--primary) 0%,
+    var(--primary-dark) 100%
+  );
 }
 
 /* ==================== Global Styles ==================== */

@@ -104,7 +104,9 @@ function GasBlender() {
       pressure: parseFloat(targetPressure.toString()),
     };
 
-    const selected = availableGases.filter((gas) => isGasValid(gas) && selectedGases[gas.name]);
+    const selected = availableGases.filter(
+      (gas) => isGasValid(gas) && selectedGases[gas.name],
+    );
     const result = calculateBlendingSteps(startingGas, targetGas, selected);
     setBlendingSteps(result);
   };
@@ -151,7 +153,8 @@ function GasBlender() {
       }
 
       const rawValue = typeof value === "string" ? value : value.toString();
-      const numericValue = rawValue.trim() === "" ? Number.NaN : parseFloat(rawValue);
+      const numericValue =
+        rawValue.trim() === "" ? Number.NaN : parseFloat(rawValue);
 
       nextGas = {
         ...gasToUpdate,
@@ -162,7 +165,8 @@ function GasBlender() {
 
       if (validMix) {
         const duplicateExists = prevGases.some(
-          (gas, idx) => idx !== index && gas.o2 === nextGas.o2 && gas.he === nextGas.he,
+          (gas, idx) =>
+            idx !== index && gas.o2 === nextGas.o2 && gas.he === nextGas.he,
         );
 
         if (duplicateExists) {
@@ -225,7 +229,10 @@ function GasBlender() {
         editable: true,
       };
 
-      setSelectedGases((prevSelected) => ({ ...prevSelected, [newGas.name]: false }));
+      setSelectedGases((prevSelected) => ({
+        ...prevSelected,
+        [newGas.name]: false,
+      }));
       setGasError(null);
 
       return [...prevGases, newGas];
@@ -384,7 +391,9 @@ function GasBlender() {
                   <label className="gas-checkbox">
                     <input
                       type="checkbox"
-                      checked={validGas ? selectedGases[gas.name] || false : false}
+                      checked={
+                        validGas ? selectedGases[gas.name] || false : false
+                      }
                       disabled={!validGas}
                       onChange={() => toggleGas(gas)}
                     />
@@ -499,21 +508,24 @@ function GasBlender() {
                   </span>
                 </div>
               </div>
-              {blendingSteps.success && Object.keys(blendingSteps.gasUsage).length > 0 && (
-                <div className="gas-usage-summary">
-                  <h4>Gas Usage:</h4>
-                  <div className="gas-usage-list">
-                    {Object.entries(blendingSteps.gasUsage).map(([gasName, liters]) => (
-                      <div key={gasName} className="gas-usage-item">
-                        <span>{gasName}:</span>
-                        <span>{liters.toFixed(1)} L</span>
-                      </div>
-                    ))}
+              {blendingSteps.success &&
+                Object.keys(blendingSteps.gasUsage).length > 0 && (
+                  <div className="gas-usage-summary">
+                    <h4>Gas Usage:</h4>
+                    <div className="gas-usage-list">
+                      {Object.entries(blendingSteps.gasUsage).map(
+                        ([gasName, liters]) => (
+                          <div key={gasName} className="gas-usage-item">
+                            <span>{gasName}:</span>
+                            <span>{liters.toFixed(1)} L</span>
+                          </div>
+                        ),
+                      )}
+                    </div>
                   </div>
-                </div>
-              )}
-              {Math.abs(blendingSteps.finalMix.o2 - targetO2) > 1 ||
-              Math.abs(blendingSteps.finalMix.he - targetHe) > 1 ? (
+                )}
+              {Math.abs(blendingSteps.finalMix.o2 - targetO2) > 0.5 ||
+              Math.abs(blendingSteps.finalMix.he - targetHe) > 0.5 ? (
                 <div className="warning">
                   ⚠️ Final mix differs from target. Adjust available gases or
                   starting conditions.
