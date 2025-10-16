@@ -499,6 +499,19 @@ function GasBlender() {
                   </span>
                 </div>
               </div>
+              {blendingSteps.success && Object.keys(blendingSteps.gasUsage).length > 0 && (
+                <div className="gas-usage-summary">
+                  <h4>Gas Usage:</h4>
+                  <div className="gas-usage-list">
+                    {Object.entries(blendingSteps.gasUsage).map(([gasName, liters]) => (
+                      <div key={gasName} className="gas-usage-item">
+                        <span>{gasName}:</span>
+                        <span>{liters.toFixed(1)} L</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
               {Math.abs(blendingSteps.finalMix.o2 - targetO2) > 1 ||
               Math.abs(blendingSteps.finalMix.he - targetHe) > 1 ? (
                 <div className="warning">

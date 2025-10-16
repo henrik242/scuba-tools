@@ -522,6 +522,44 @@ h1 {
   font-weight: 700;
 }
 
+.gas-usage-summary {
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.gas-usage-summary h4 {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+  font-weight: 600;
+  opacity: 0.95;
+}
+
+.gas-usage-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.gas-usage-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0.75rem;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: var(--border-radius);
+}
+
+.gas-usage-item span:first-child {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.gas-usage-item span:last-child {
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
 /* ==================== Tank Calculator Specific ==================== */
 .predefined-select {
   width: 100%;
