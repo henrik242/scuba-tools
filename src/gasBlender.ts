@@ -33,6 +33,7 @@ export interface BlendingStep {
   drainedPressure?: number;
   currentMix: string;
   newMix: string;
+  addedVolume?: number; // Volume in liters at 1 bar (i.e., bar·L)
 }
 
 export interface BlendingResult {
@@ -42,6 +43,7 @@ export interface BlendingResult {
     he: number;
     pressure: number;
   };
+  gasUsage: Record<string, number>; // Gas name -> total liters used (at 1 bar)
   success: boolean;
   error?: string;
 }
@@ -66,6 +68,7 @@ export function calculateBlendingSteps(
   availableGases: Gas[],
 ): BlendingResult {
   const steps: BlendingStep[] = [];
+  const gasUsage: Record<string, number> = {}; // Track total gas usage by name
 
   // Validate inputs
   if (targetGas.o2 + targetGas.he > 100) {
@@ -76,6 +79,7 @@ export function calculateBlendingSteps(
         he: startingGas.he,
         pressure: startingGas.pressure,
       },
+      gasUsage: {},
       success: false,
       error: "Target O₂ + He exceeds 100%",
     };
@@ -180,12 +184,22 @@ export function calculateBlendingSteps(
 
     const updatedFractions = getFractions();
 
+    // Calculate volume in liters (pressure × volume)
+    const addedVolume = roundTo(roundedAmount * startingGas.volume, 1);
+
+    // Track gas usage
+    if (!gasUsage[gas.name]) {
+      gasUsage[gas.name] = 0;
+    }
+    gasUsage[gas.name] += addedVolume;
+
     steps.push({
       action: label,
       gas: gas.name,
       fromPressure: roundTo(previousPressure, 2),
       toPressure: roundTo(currentPressure, 2),
       addedPressure: roundedAmount,
+      addedVolume,
       currentMix: createMixLabel(previousFractions.o2, previousFractions.he),
       newMix: createMixLabel(updatedFractions.o2, updatedFractions.he),
     });
@@ -412,10 +426,11 @@ export function calculateBlendingSteps(
     return {
       steps,
       finalMix,
+      gasUsage,
       success: false,
       error: `Unable to reach target mix accurately. Final: ${finalMix.o2}/${finalMix.he} at ${finalMix.pressure} bar. Try adjusting available gases.`,
     };
   }
 
-  return { steps, finalMix, success: true };
+  return { steps, finalMix, gasUsage, success: true };
 }
