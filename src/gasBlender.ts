@@ -305,6 +305,16 @@ export function calculateBlendingSteps(
         }
       }
 
+      // When we have pure O2 available and the best gas doesn't get us very close,
+      // prefer the LOWEST O2 gas (typically Air) because the two-gas blending
+      // algorithm can achieve better precision
+      if (pureO2 && bestDiff > 0.7) {
+        const lowestO2Gas = airGases.reduce((lowest, current) =>
+          current.o2 < lowest.o2 ? current : lowest,
+        );
+        bestAirGas = lowestO2Gas;
+      }
+
       // Special case: If we have pure O2 and a low-O2 gas (like Air),
       // solve the two-gas blending equation precisely
       if (pureO2 && bestAirGas && Math.abs(bestAirGas.o2 - pureO2.o2) > 10) {

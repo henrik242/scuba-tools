@@ -259,13 +259,11 @@ describe("Gas Blender - Professional Trimix Calculations", () => {
         standardGases,
       );
 
-      // Should drain or indicate it can't achieve the mix
-      if (result.success) {
-        expect(result.steps[0].action).toContain("Drain");
-        expect(result.finalMix.he).toBeCloseTo(35, 0);
-      } else {
-        expect(result.error).toBeDefined();
-      }
+      // With improved algorithm, this can be achieved by adding helium and O2
+      // without draining, as long as the target is achievable
+      expect(result.success).toBe(true);
+      expect(result.finalMix.he).toBeCloseTo(35, 0);
+      expect(result.finalMix.o2).toBeCloseTo(21, 0);
     });
 
     it("should completely drain when partial pressure values are incompatible", () => {
@@ -672,6 +670,40 @@ describe("Gas Blender - Professional Trimix Calculations", () => {
   });
 
   describe("Real-World Scenarios", () => {
+    it("should top up 19/37 at 50 bar to 18/40 at 220 bar with Nitrox 32 available", () => {
+      // Regression test for reported issue where Nitrox 32 was incorrectly chosen over Air
+      const gases: Gas[] = [
+        { name: "Air", o2: 21, he: 0, editable: false },
+        { name: "O2", o2: 100, he: 0, editable: false },
+        { name: "Helium", o2: 0, he: 100, editable: false },
+        { name: "Nitrox 32", o2: 32, he: 0, editable: true },
+      ];
+
+      const startingGas: TankState = {
+        volume: 11,
+        o2: 19,
+        he: 37,
+        pressure: 50,
+      };
+
+      const targetGas: TargetGas = {
+        o2: 18,
+        he: 40,
+        pressure: 220,
+      };
+
+      const result = calculateBlendingSteps(startingGas, targetGas, gases);
+
+      expect(result.success).toBe(true);
+      expect(result.finalMix.o2).toBe(18);
+      expect(result.finalMix.he).toBe(40);
+      expect(result.finalMix.pressure).toBe(220);
+
+      // Should use Air, not Nitrox 32, for the final top-up
+      const airStep = result.steps.find((s) => s.gas === "Air");
+      expect(airStep).toBeDefined();
+    });
+
     it("should blend bottom gas for 100m dive (14/55)", () => {
       const startingGas: TankState = {
         volume: 24, // Twin 12s
