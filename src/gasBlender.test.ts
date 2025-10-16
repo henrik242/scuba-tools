@@ -810,6 +810,46 @@ describe("Gas Blender - Professional Trimix Calculations", () => {
       expect(result.finalMix.o2).toBeCloseTo(18, 0);
       expect(result.finalMix.pressure).toBe(200);
     });
+
+    it("should have consistent success/failure logic with 0.5% tolerance (issue regression test)", () => {
+      // Test case from GitHub issue: 19/37 at 70 bar -> 15/40 at 220 bar
+      // This was showing both error message and success message due to tolerance mismatch
+      const startingGas: TankState = {
+        volume: 11,
+        o2: 19,
+        he: 37,
+        pressure: 70,
+      };
+
+      const targetGas: TargetGas = {
+        o2: 15,
+        he: 40,
+        pressure: 220,
+      };
+
+      const result = calculateBlendingSteps(
+        startingGas,
+        targetGas,
+        standardGases,
+      );
+
+      // The algorithm uses 0.5% tolerance for success determination
+      const o2Error = Math.abs(result.finalMix.o2 - targetGas.o2);
+      const heError = Math.abs(result.finalMix.he - targetGas.he);
+      const pressureError = Math.abs(
+        result.finalMix.pressure - targetGas.pressure,
+      );
+
+      // If the algorithm says success, errors should be within 0.5% tolerance
+      if (result.success) {
+        expect(o2Error).toBeLessThanOrEqual(0.5);
+        expect(heError).toBeLessThanOrEqual(0.5);
+        expect(pressureError).toBeLessThanOrEqual(1);
+      } else {
+        // If it fails, at least one error should exceed 0.5% tolerance
+        expect(o2Error > 0.5 || heError > 0.5 || pressureError > 1).toBe(true);
+      }
+    });
   });
 
   describe("Professional Gas Blending - Critical Safety Tests", () => {
