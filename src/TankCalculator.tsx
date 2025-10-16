@@ -11,7 +11,7 @@ const tankIllustrations = {
   full: "/tanks-full.svg",
   empty: "/tanks-empty.svg",
   singleFull: "/tank-full.svg",
-  singleEmpty: "/tank-empty.svg"
+  singleEmpty: "/tank-empty.svg",
 } as const;
 
 function TankCalculator() {
@@ -35,9 +35,7 @@ function TankCalculator() {
   );
 
   const formatBuoyancy = (kgValue: number, lbsValue: number) =>
-    useMetric
-      ? `${kgValue.toFixed(1)} kg`
-      : `${lbsValue.toFixed(1)} lbs`;
+    useMetric ? `${kgValue.toFixed(1)} kg` : `${lbsValue.toFixed(1)} lbs`;
 
   // Load state from URL on mount
   useEffect(() => {
@@ -598,7 +596,11 @@ function TankCalculator() {
               <div className="buoyancy-panels">
                 <div className="buoyancy-panel">
                   <img
-                    src={isDoubles ? tankIllustrations.full : tankIllustrations.singleFull}
+                    src={
+                      isDoubles
+                        ? tankIllustrations.full
+                        : tankIllustrations.singleFull
+                    }
                     className="tank-illustration"
                     alt=""
                     aria-hidden="true"
@@ -606,14 +608,23 @@ function TankCalculator() {
                   <div className="buoyancy-details">
                     <span className="buoyancy-label">Full Tank</span>
                     <span className="buoyancy-value">
-                      {formatBuoyancy(result.fullBuoyancyKg, result.fullBuoyancyLbs)}
+                      {formatBuoyancy(
+                        result.fullBuoyancyKg,
+                        result.fullBuoyancyLbs,
+                      )}
                     </span>
-                    <span className="buoyancy-subtext">Includes breathing gas weight</span>
+                    <span className="buoyancy-subtext">
+                      Includes breathing gas weight
+                    </span>
                   </div>
                 </div>
                 <div className="buoyancy-panel">
                   <img
-                    src={isDoubles ? tankIllustrations.empty : tankIllustrations.singleEmpty}
+                    src={
+                      isDoubles
+                        ? tankIllustrations.empty
+                        : tankIllustrations.singleEmpty
+                    }
                     className="tank-illustration"
                     alt=""
                     aria-hidden="true"
@@ -621,9 +632,14 @@ function TankCalculator() {
                   <div className="buoyancy-details">
                     <span className="buoyancy-label">Empty Tank</span>
                     <span className="buoyancy-value">
-                      {formatBuoyancy(result.emptyBuoyancyKg, result.emptyBuoyancyLbs)}
+                      {formatBuoyancy(
+                        result.emptyBuoyancyKg,
+                        result.emptyBuoyancyLbs,
+                      )}
                     </span>
-                    <span className="buoyancy-subtext">After the dive when gas is spent</span>
+                    <span className="buoyancy-subtext">
+                      After the dive when gas is spent
+                    </span>
                   </div>
                 </div>
               </div>
