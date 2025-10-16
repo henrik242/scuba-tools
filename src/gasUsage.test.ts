@@ -35,7 +35,7 @@ describe("Gas Usage Tracking", () => {
 
     expect(result.success).toBe(true);
     expect(result.gasUsage).toBeDefined();
-
+    
     // Each step should have addedVolume
     result.steps.forEach((step) => {
       if (step.addedPressure && step.addedPressure > 0) {
@@ -45,17 +45,14 @@ describe("Gas Usage Tracking", () => {
     });
 
     // Total gas used should equal tank volume × target pressure
-    const totalUsed = Object.values(result.gasUsage).reduce(
-      (sum, val) => sum + val,
-      0,
-    );
+    const totalUsed = Object.values(result.gasUsage).reduce((sum, val) => sum + val, 0);
     const expected = startingGas.volume * targetGas.pressure;
-
+    
     expect(totalUsed).toBeCloseTo(expected, 0);
-
+    
     // Should have used Helium, O2, and Air
     expect(Object.keys(result.gasUsage).length).toBeGreaterThan(0);
-
+    
     console.log("\n=== Gas Usage Summary ===");
     Object.entries(result.gasUsage).forEach(([gas, liters]) => {
       console.log(`${gas}: ${liters.toFixed(1)} L`);
@@ -85,16 +82,14 @@ describe("Gas Usage Tracking", () => {
 
     expect(result.success).toBe(true);
     expect(result.gasUsage["Air"]).toBeDefined();
-
+    
     // Should have used 150 bar × 12L = 1800L of air
     const pressureDiff = targetGas.pressure - startingGas.pressure;
     const expectedAir = pressureDiff * startingGas.volume;
-
+    
     expect(result.gasUsage["Air"]).toBeCloseTo(expectedAir, 0);
-
-    console.log(
-      `\nAir used: ${result.gasUsage["Air"].toFixed(1)} L (expected ${expectedAir} L)`,
-    );
+    
+    console.log(`\nAir used: ${result.gasUsage["Air"].toFixed(1)} L (expected ${expectedAir} L)`);
   });
 
   it("should have gas usage in each addition step", () => {
@@ -118,23 +113,19 @@ describe("Gas Usage Tracking", () => {
     );
 
     expect(result.success).toBe(true);
-
+    
     // Each gas addition step should include volume
-    const additionSteps = result.steps.filter(
-      (s) => s.addedPressure && s.addedPressure > 0,
-    );
-
+    const additionSteps = result.steps.filter(s => s.addedPressure && s.addedPressure > 0);
+    
     additionSteps.forEach((step) => {
       expect(step.addedVolume).toBeDefined();
       expect(step.addedVolume).toBeGreaterThan(0);
-
+      
       // Verify volume calculation: addedVolume = addedPressure × tank volume
       const expectedVolume = step.addedPressure! * startingGas.volume;
       expect(step.addedVolume).toBeCloseTo(expectedVolume, 0);
-
-      console.log(
-        `Step: ${step.action} - ${step.addedPressure} bar × ${startingGas.volume}L = ${step.addedVolume}L`,
-      );
+      
+      console.log(`Step: ${step.action} - ${step.addedPressure} bar × ${startingGas.volume}L = ${step.addedVolume}L`);
     });
   });
 });
