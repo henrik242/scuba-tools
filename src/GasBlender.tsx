@@ -421,7 +421,7 @@ function GasBlender() {
           <h2>Target Gas</h2>
           <div className="form-grid">
             <div className="form-group">
-              <label>Target Pressure (bar)</label>
+              <label>Pressure (bar)</label>
               <input
                 type="number"
                 value={targetPressure}
