@@ -90,26 +90,35 @@ function GasBlender() {
     targetPressure,
   ]);
 
-  const handleCalculate = () => {
+  // Remove the handleCalculate function and instead calculate automatically:
+  useEffect(() => {
     const startingGas = {
       volume: parseFloat(startVolume.toString()),
       o2: parseFloat(startO2.toString()),
       he: parseFloat(startHe.toString()),
       pressure: parseFloat(startPressure.toString()),
     };
-
     const targetGas = {
       o2: parseFloat(targetO2.toString()),
       he: parseFloat(targetHe.toString()),
       pressure: parseFloat(targetPressure.toString()),
     };
-
     const selected = availableGases.filter(
       (gas) => isGasValid(gas) && selectedGases[gas.name],
     );
     const result = calculateBlendingSteps(startingGas, targetGas, selected);
     setBlendingSteps(result);
-  };
+  }, [
+    startVolume,
+    startO2,
+    startHe,
+    startPressure,
+    targetO2,
+    targetHe,
+    targetPressure,
+    availableGases,
+    selectedGases,
+  ]);
 
   const toggleGas = (gas: Gas) => {
     if (!isGasValid(gas)) {
@@ -439,9 +448,9 @@ function GasBlender() {
           </button>
         </div>
 
-        <button className="calculate-btn" onClick={handleCalculate}>
+        {/* <button className="calculate-btn" onClick={handleCalculate}>
           Calculate Blending Steps
-        </button>
+        </button> */}
 
         {blendingSteps && (
           <div className="card results">
