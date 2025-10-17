@@ -15,8 +15,8 @@ export default defineConfig({
         "tanks-full.svg",
       ],
       manifest: {
-        name: "Synth Blender",
-        short_name: "Synth Blender",
+        name: "Synth Scuba",
+        short_name: "Synth Scuba",
         description: "Gas blender and tank calculator for scuba diving",
         theme_color: "#1a1a1a",
         background_color: "#242424",
