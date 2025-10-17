@@ -508,6 +508,15 @@ function GasBlender() {
                   </span>
                 </div>
               </div>
+              {Math.abs(blendingSteps.finalMix.o2 - targetO2) > 0.5 ||
+              Math.abs(blendingSteps.finalMix.he - targetHe) > 0.5 ? (
+                <div className="warning">
+                  ⚠️ Final mix differs from target. Adjust available gases or
+                  starting conditions.
+                </div>
+              ) : (
+                <div className="success">✓ Target mix achieved!</div>
+              )}
               {blendingSteps.success &&
                 Object.keys(blendingSteps.gasUsage).length > 0 && (
                   <div className="gas-usage-summary">
@@ -524,15 +533,6 @@ function GasBlender() {
                     </div>
                   </div>
                 )}
-              {Math.abs(blendingSteps.finalMix.o2 - targetO2) > 0.5 ||
-              Math.abs(blendingSteps.finalMix.he - targetHe) > 0.5 ? (
-                <div className="warning">
-                  ⚠️ Final mix differs from target. Adjust available gases or
-                  starting conditions.
-                </div>
-              ) : (
-                <div className="success">✓ Target mix achieved!</div>
-              )}
             </div>
           </div>
         )}
