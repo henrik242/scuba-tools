@@ -263,13 +263,21 @@ export function calculateBlendingSteps(
 
       if (Math.abs(denominator) > 0.001) {
         const drainTo =
-          (targetO2PP - targetPressure * airO2Fraction + targetHePP * airO2Fraction) /
+          (targetO2PP -
+            targetPressure * airO2Fraction +
+            targetHePP * airO2Fraction) /
           denominator;
-        const calculatedDrainPressure = Math.max(0, Math.min(currentPressure, drainTo));
+        const calculatedDrainPressure = Math.max(
+          0,
+          Math.min(currentPressure, drainTo),
+        );
         drainToPressure = Math.min(drainToPressure, calculatedDrainPressure);
       } else {
         const drainTo = (targetHePP - targetPressure) / (fractions.he - 1);
-        const calculatedDrainPressure = Math.max(0, Math.min(currentPressure, drainTo));
+        const calculatedDrainPressure = Math.max(
+          0,
+          Math.min(currentPressure, drainTo),
+        );
         drainToPressure = Math.min(drainToPressure, calculatedDrainPressure);
       }
     }
