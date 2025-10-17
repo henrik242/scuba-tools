@@ -7,7 +7,6 @@ import {
 } from "./gasBlender";
 
 describe("Gas Blender - Professional Trimix Calculations", () => {
-  // Standard available gases for testing
   const standardGases: Gas[] = [
     { name: "Air", o2: 21, he: 0, editable: false },
     { name: "O2", o2: 100, he: 0, editable: false },
@@ -228,13 +227,10 @@ describe("Gas Blender - Professional Trimix Calculations", () => {
         standardGases,
       );
 
-      // This scenario currently fails because the algorithm needs improvement
-      // It should drain but doesn't always achieve perfect accuracy
       if (result.success) {
         expect(result.steps.length).toBeGreaterThan(0);
         expect(result.finalMix.o2).toBeCloseTo(21, 0);
       } else {
-        // Accept that this is a known limitation
         expect(result.error).toContain("Unable to reach target mix");
       }
     });
@@ -259,8 +255,6 @@ describe("Gas Blender - Professional Trimix Calculations", () => {
         standardGases,
       );
 
-      // With improved algorithm, this can be achieved by adding helium and O2
-      // without draining, as long as the target is achievable
       expect(result.success).toBe(true);
       expect(result.finalMix.he).toBeCloseTo(35, 0);
       expect(result.finalMix.o2).toBeCloseTo(21, 0);
@@ -366,13 +360,10 @@ describe("Gas Blender - Professional Trimix Calculations", () => {
         standardGases,
       );
 
-      // With current gas selection, this may not achieve perfect accuracy
-      // The algorithm uses available gases which may not be optimal
       if (result.success) {
         expect(result.finalMix.o2).toBeCloseTo(21, 0);
         expect(result.finalMix.he).toBeCloseTo(30, 0);
       } else {
-        // Algorithm needs better gas or accepts slight deviation
         expect(result.finalMix.he).toBeCloseTo(30, 0);
       }
     });
@@ -1421,6 +1412,46 @@ describe("Gas Blender - Professional Trimix Calculations", () => {
         expect(result.success).toBe(true);
         expect(Math.abs(result.finalMix.o2 - 30)).toBeLessThanOrEqual(0.5);
         expect(Math.abs(result.finalMix.he - 30)).toBeLessThanOrEqual(2.0);
+      });
+    });
+
+    describe("Drain and Blend Scenarios", () => {
+      it("should blend 18/45 from 32/10 at 220 bar (same pressure)", () => {
+        const basicGases: Gas[] = [
+          { name: "Air", o2: 21, he: 0 },
+          { name: "O2", o2: 100, he: 0 },
+          { name: "Helium", o2: 0, he: 100 },
+        ];
+
+        const startingGas: TankState = {
+          volume: 11,
+          o2: 32,
+          he: 10,
+          pressure: 220,
+        };
+
+        const targetGas: TargetGas = {
+          o2: 18,
+          he: 45,
+          pressure: 220,
+        };
+
+        const result = calculateBlendingSteps(
+          startingGas,
+          targetGas,
+          basicGases,
+        );
+
+        expect(result.success).toBe(true);
+        expect(result.finalMix.o2).toBeCloseTo(18, 0);
+        expect(result.finalMix.he).toBeCloseTo(45, 0);
+        expect(result.finalMix.pressure).toBeCloseTo(220, 0);
+
+        const drainStep = result.steps.find((s) => s.action.toLowerCase().includes("drain"));
+        const heStep = result.steps.find((s) => s.gas === "Helium");
+
+        expect(drainStep).toBeDefined();
+        expect(heStep).toBeDefined();
       });
     });
   });
