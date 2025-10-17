@@ -235,6 +235,43 @@ describe("Gas Blender - Trimix Calculations", () => {
       }
     });
 
+    it("should drain sufficiently when blending Nitrox 32 to 18/35 trimix", () => {
+      // Specific scenario from URL: https://scuba.synth.no/blender.html#startVolume=11&startO2=32&startHe=0&startPressure=110&targetO2=18&targetHe=35&targetPressure=220&gases=21-0_100-0_0-100
+      const startingGas: TankState = {
+        volume: 11,
+        o2: 32,
+        he: 0,
+        pressure: 110,
+      };
+
+      const targetGas: TargetGas = {
+        o2: 18,
+        he: 35,
+        pressure: 220,
+      };
+
+      const gases: Gas[] = [
+        { name: "Air", o2: 21, he: 0 },
+        { name: "O2", o2: 100, he: 0 },
+        { name: "Helium", o2: 0, he: 100 },
+      ];
+
+      const result = calculateBlendingSteps(startingGas, targetGas, gases);
+
+      // Should succeed
+      expect(result.success).toBe(true);
+
+      // Should have a drain step
+      const drainStep = result.steps.find((s) => s.action.includes("Drain"));
+      expect(drainStep).toBeDefined();
+      expect(drainStep!.toPressure).toBeLessThan(110);
+
+      // Should reach target mix
+      expect(result.finalMix.o2).toBeCloseTo(18, 0);
+      expect(result.finalMix.he).toBeCloseTo(35, 0);
+      expect(result.finalMix.pressure).toBeCloseTo(220, 0);
+    });
+
     it("should drain when starting He is too high", () => {
       const startingGas: TankState = {
         volume: 12,
@@ -623,7 +660,7 @@ describe("Gas Blender - Trimix Calculations", () => {
         expect(step).toHaveProperty("currentMix");
         expect(step).toHaveProperty("newMix");
         expect(step.toPressure).toBeGreaterThanOrEqual(
-          step.fromPressure - step.drainedPressure || 0,
+          step.fromPressure - (step.drainedPressure || 0),
         );
       });
     });

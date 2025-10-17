@@ -208,102 +208,98 @@ export function calculateBlendingSteps(
 
   updateDeltas();
 
-  // STEP 0: Check if we need to drain (ALWAYS FIRST STEP if needed)
-  // We need to drain if:
-  // 1. We have too much of any component (negative deltas), OR
-  // 2. We're at target pressure but need to add helium (need to make room)
-
+  // STEP 0: Check if we need to drain and calculate drain pressure
   let needsDrain = false;
   let drainToPressure = currentPressure;
-  let canPartialDrain = true;
   const fractions = getFractions();
-
-  // Check if we need to reduce any component
-  if (deltaHe < -0.5 || deltaN2 < -0.5 || deltaO2 < -0.5) {
-    needsDrain = true;
-
-    // Calculate the minimum drain pressure needed for each component
-    if (deltaHe < -0.5) {
-      if (fractions.he > 0.001) {
-        const maxPressureForHe = targetHePP / fractions.he;
-        drainToPressure = Math.min(drainToPressure, maxPressureForHe);
-      } else {
-        canPartialDrain = false;
-      }
-    }
-    if (deltaO2 < -0.5) {
-      if (fractions.o2 > 0.001) {
-        const maxPressureForO2 = targetO2PP / fractions.o2;
-        drainToPressure = Math.min(drainToPressure, maxPressureForO2);
-      } else {
-        canPartialDrain = false;
-      }
-    }
-    if (deltaN2 < -0.5) {
-      if (fractions.n2 > 0.001) {
-        const maxPressureForN2 = targetN2PP / fractions.n2;
-        drainToPressure = Math.min(drainToPressure, maxPressureForN2);
-      } else {
-        canPartialDrain = false;
-      }
-    }
-  }
-
-  // Also check if we need to add helium but are already at target pressure
-  if (currentPressure >= targetPressure - 0.5 && deltaHe > 0.5) {
-    needsDrain = true;
-    // We're at or above target pressure and need more helium
-    // Drain enough to make room for helium
-    const pureHe = availableGases.find((g) => g.he > 95 && g.o2 < 5);
-    if (pureHe) {
-      // Calculate drain pressure accounting for He addition and Air top-up
-      // P_drain = (targetO2PP - targetPressure*0.21 + targetHePP*0.21) / (fractions.o2 - 0.21*(1-fractions.he))
-      const airO2Fraction = 0.21;
-      const denominator = fractions.o2 - airO2Fraction * (1 - fractions.he);
-
-      if (Math.abs(denominator) > 0.001) {
-        const drainTo =
-          (targetO2PP -
-            targetPressure * airO2Fraction +
-            targetHePP * airO2Fraction) /
-          denominator;
-        const calculatedDrainPressure = Math.max(
-          0,
-          Math.min(currentPressure, drainTo),
-        );
-        drainToPressure = Math.min(drainToPressure, calculatedDrainPressure);
-      } else {
-        const drainTo = (targetHePP - targetPressure) / (fractions.he - 1);
-        const calculatedDrainPressure = Math.max(
-          0,
-          Math.min(currentPressure, drainTo),
-        );
-        drainToPressure = Math.min(drainToPressure, calculatedDrainPressure);
-      }
-    }
-  }
-
-  // Execute the drain if needed
-  if (needsDrain) {
-    const targetDrainPressure = roundTo(Math.max(0, drainToPressure), 2);
-    const drainedAmount = currentPressure - targetDrainPressure;
-
-    if (drainedAmount > 0.5 && canPartialDrain && targetDrainPressure > 0) {
-      recordDrain(targetDrainPressure);
-    } else if (!canPartialDrain || drainedAmount >= currentPressure - 0.5) {
-      recordDrain(0, true);
-    }
-  }
 
   // Get available gases
   const pureHe = availableGases.find((g) => g.he > 95 && g.o2 < 5);
   const pureO2 = availableGases.find((g) => g.o2 > 95 && g.he < 5);
-  const trimixGases = availableGases
-    .filter((g) => g.he > 30)
-    .sort((a, b) => b.he - a.he);
   const airGases = availableGases
     .filter((g) => g.he < 5 && g.o2 >= 19 && g.o2 <= 40)
     .sort((a, b) => a.o2 - b.o2);
+
+  // Check if we have too much of any component (need to remove gas)
+  if (deltaHe < -0.5 || deltaN2 < -0.5 || deltaO2 < -0.5) {
+    needsDrain = true;
+
+    // Calculate maximum pressure we can keep for each component
+    if (deltaHe < -0.5 && fractions.he > 0.001) {
+      drainToPressure = Math.min(drainToPressure, targetHePP / fractions.he);
+    }
+    if (deltaO2 < -0.5 && fractions.o2 > 0.001) {
+      drainToPressure = Math.min(drainToPressure, targetO2PP / fractions.o2);
+    }
+    if (deltaN2 < -0.5 && fractions.n2 > 0.001) {
+      drainToPressure = Math.min(drainToPressure, targetN2PP / fractions.n2);
+    }
+  }
+
+  // Calculate drain pressure for helium blending scenarios
+  // Sequence: Drain → Add He → Top with Air/O2
+  if (deltaHe > 0.5 && pureHe && airGases.length > 0) {
+    const airGas = airGases[0];
+    const airO2Frac = airGas.o2 / 100;
+    const airN2Frac = (100 - airGas.o2 - airGas.he) / 100;
+
+    let calculatedDrainPressure: number;
+
+    if (pureO2) {
+      // Two-gas topping (O2 + Air) for precise control
+      // Solve for P_drain where after adding He, then topping with Air+O2,
+      // we hit exact target O2, N2, and He partial pressures.
+      // Equation: P_drain * coeff = rhs (derived from N2 and O2 balance)
+      const coeff = fractions.o2 - 1 + fractions.he - fractions.n2 * (airO2Frac - 1) / airN2Frac;
+      const rhs = targetO2PP - targetPressure + targetHePP - targetN2PP * (airO2Frac - 1) / airN2Frac;
+
+      if (Math.abs(coeff) > 0.0001) {
+        calculatedDrainPressure = rhs / coeff;
+      } else {
+        // Fallback to air-only formula
+        calculatedDrainPressure =
+          (targetO2PP - targetPressure * airO2Frac + targetHePP * airO2Frac) /
+          (fractions.o2 - (1 - fractions.he) * airO2Frac);
+      }
+    } else {
+      // Single-gas topping (Air only)
+      // After drain and He addition, top with air to reach target pressure
+      // Solve: P_drain * fractions.o2 + air_amount * airO2Frac = targetO2PP
+      const denominator = fractions.o2 - (1 - fractions.he) * airO2Frac;
+
+      if (Math.abs(denominator) > 0.0001) {
+        calculatedDrainPressure =
+          (targetO2PP - targetPressure * airO2Frac + targetHePP * airO2Frac) / denominator;
+      } else {
+        // Fallback: drain to make room for helium
+        calculatedDrainPressure = targetPressure - deltaHe;
+      }
+    }
+
+    // Apply drain if calculated pressure is lower or we need to make room
+    if (calculatedDrainPressure < currentPressure - 0.5 ||
+        (currentPressure >= targetPressure - 0.5 && deltaHe > 0.5)) {
+      needsDrain = true;
+      drainToPressure = Math.min(drainToPressure, Math.max(0, calculatedDrainPressure));
+    }
+  }
+
+  // Execute the drain
+  if (needsDrain) {
+    const targetDrainPressure = roundTo(Math.max(0, drainToPressure), 2);
+    const drainedAmount = currentPressure - targetDrainPressure;
+
+    if (drainedAmount > 0.5 && targetDrainPressure > 0.5) {
+      recordDrain(targetDrainPressure);
+    } else if (drainedAmount > 0.5) {
+      recordDrain(0, true);
+    }
+  }
+
+  // Get trimix gases for helium addition
+  const trimixGases = availableGases
+    .filter((g) => g.he > 30)
+    .sort((a, b) => b.he - a.he);
 
   // STEP 1: Add helium if needed
   if (deltaHe > 0.1) {
@@ -358,11 +354,7 @@ export function calculateBlendingSteps(
 
       // Two-gas blending for precise O2 control
       if (pureO2 && bestAirGas && Math.abs(bestAirGas.o2 - pureO2.o2) > 10) {
-        // Solve system of equations for two-gas blend:
-        // Let x = pressure of O2, y = pressure of air/nitrox
-        // x + y = remainingPressure
-        // (pureO2.o2/100)*x + (airGas.o2/100)*y = neededO2PP
-
+        // Solve for air and O2 amounts to hit exact target O2 and N2
         const neededO2PP = targetO2PP - currentO2PP;
         const neededN2PP = targetN2PP - currentN2PP;
 
@@ -370,29 +362,23 @@ export function calculateBlendingSteps(
         const airGasFraction = bestAirGas.o2 / 100;
         const airN2GasFraction = (100 - bestAirGas.o2 - bestAirGas.he) / 100;
 
-        // Solve for y (air/nitrox pressure) using N2 or O2 equation
         let airPressure: number;
         let o2Pressure: number;
 
-        // If we need nitrogen, solve using the nitrogen equation
+        // Use N2 equation if we need nitrogen, otherwise use O2 equation
         if (neededN2PP > 0.1 && airN2GasFraction > 0.01) {
           airPressure = neededN2PP / airN2GasFraction;
           o2Pressure = remainingPressure - airPressure;
         } else {
-          // Solve using O2 equation: neededO2PP = o2GasFraction*x + airGasFraction*y
-          // where x + y = remainingPressure, so x = remainingPressure - y
-          // neededO2PP = o2GasFraction*(remainingPressure - y) + airGasFraction*y
-          // neededO2PP = o2GasFraction*remainingPressure - o2GasFraction*y + airGasFraction*y
-          // neededO2PP = o2GasFraction*remainingPressure + y*(airGasFraction - o2GasFraction)
-          // y = (neededO2PP - o2GasFraction*remainingPressure) / (airGasFraction - o2GasFraction)
-
+          // Solve: neededO2PP = o2Frac * o2Pressure + airFrac * airPressure
+          // where: o2Pressure + airPressure = remainingPressure
           if (Math.abs(airGasFraction - o2GasFraction) > 0.01) {
             airPressure =
               (neededO2PP - o2GasFraction * remainingPressure) /
               (airGasFraction - o2GasFraction);
             o2Pressure = remainingPressure - airPressure;
           } else {
-            // Gases too similar, use simpler approach
+            // Gases too similar, just use air
             airPressure = remainingPressure;
             o2Pressure = 0;
           }
@@ -402,7 +388,7 @@ export function calculateBlendingSteps(
         airPressure = Math.max(0, Math.min(remainingPressure, airPressure));
         o2Pressure = Math.max(0, Math.min(remainingPressure, o2Pressure));
 
-        // Ensure they sum to remainingPressure
+        // Normalize to sum to remainingPressure
         const total = airPressure + o2Pressure;
         if (total > 0.1) {
           airPressure = (airPressure / total) * remainingPressure;
@@ -427,27 +413,18 @@ export function calculateBlendingSteps(
           );
         }
       } else {
-        // Original algorithm for cases without precise two-gas solution
-        // Calculate how much O2 the air will contribute
+        // Single-gas topping: add O2 first, then air to reach target pressure
         const o2FromAir = (bestAirGas.o2 / 100) * remainingPressure;
         const projectedO2PP = currentO2PP + o2FromAir;
-
-        // Recalculate deltaO2 considering what air will add
         deltaO2 = targetO2PP - projectedO2PP;
 
-        // STEP 2a: Add pure O2 ONLY if we still need more O2 after accounting for air
+        // Add O2 if needed after accounting for O2 in air
         if (deltaO2 > 0.1 && pureO2) {
-          const o2ToAdd = roundTo(deltaO2, 1);
-
-          recordGasAddition(pureO2, o2ToAdd, `Add ${pureO2.name}`);
+          recordGasAddition(pureO2, roundTo(deltaO2, 1), `Add ${pureO2.name}`);
         }
 
-        // STEP 3: Now add air/nitrox to reach target pressure (ALWAYS LAST)
-        const finalRemainingPressure = roundTo(
-          targetPressure - currentPressure,
-          1,
-        );
-
+        // Top up with air to reach target pressure
+        const finalRemainingPressure = roundTo(targetPressure - currentPressure, 1);
         if (finalRemainingPressure > 0.1) {
           recordGasAddition(
             bestAirGas,
