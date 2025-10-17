@@ -1,4 +1,4 @@
-# Scuba Tools
+# Synth Blender
 
 A collection of web-based calculators for scuba diving.
 
