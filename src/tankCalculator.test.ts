@@ -5,7 +5,7 @@ import {
   TankInput,
 } from "./tankCalculator";
 
-describe("Tank Calculator - Professional Scuba Tank Calculations", () => {
+describe("Tank Calculator - Scuba Tank Calculations", () => {
   describe("Real-world Steel Tanks (Metric)", () => {
     it("should calculate buoyancy for standard 12L 232 bar steel tank (3kg empty weight)", () => {
       const input: TankInput = {

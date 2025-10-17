@@ -6,7 +6,7 @@ import {
   TargetGas,
 } from "./gasBlender";
 
-describe("Gas Blender - Professional Trimix Calculations", () => {
+describe("Gas Blender - Trimix Calculations", () => {
   const standardGases: Gas[] = [
     { name: "Air", o2: 21, he: 0, editable: false },
     { name: "O2", o2: 100, he: 0, editable: false },
@@ -843,7 +843,7 @@ describe("Gas Blender - Professional Trimix Calculations", () => {
     });
   });
 
-  describe("Professional Gas Blending - Critical Safety Tests", () => {
+  describe("Gas Blending - Critical Safety Tests", () => {
     describe("Oxygen Toxicity and MOD Verification", () => {
       it("should correctly blend high-O2 deco gas (80% O2)", () => {
         const startingGas: TankState = {
