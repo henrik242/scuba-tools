@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { calculateBlendingSteps, Gas } from "./gasBlender";
 import "./App.css";
 
@@ -9,6 +9,19 @@ const DEFAULT_AVAILABLE_GASES: Gas[] = [
   { name: "Nitrox 32", o2: 32, he: 0, editable: true },
   { name: "10/70", o2: 10, he: 70, editable: true },
 ];
+
+// Helper function to generate gas name based on O2/He percentages
+const generateGasName = (o2: number, he: number): string => {
+  if (he === 0 && o2 > 21 && o2 < 41) {
+    return `Nitrox ${o2}`;
+  }
+  return `${o2}/${he}`;
+};
+
+// Helper function to find matching default gas
+const findDefaultGas = (o2: number, he: number): Gas | undefined => {
+  return DEFAULT_AVAILABLE_GASES.find(gas => gas.o2 === o2 && gas.he === he);
+};
 
 function GasBlender() {
   // Starting gas state
@@ -48,6 +61,9 @@ function GasBlender() {
     typeof calculateBlendingSteps
   > | null>(null);
 
+  // Track initial mount
+  const isMounted = useRef(false);
+
   // Load state from URL on mount
   useEffect(() => {
     const params = new URLSearchParams(window.location.hash.substring(1));
@@ -66,10 +82,55 @@ function GasBlender() {
       setTargetHe(parseFloat(params.get("targetHe")!) || 45);
     if (params.has("targetPressure"))
       setTargetPressure(parseFloat(params.get("targetPressure")!) || 220);
+
+    // Load available gases from URL
+    if (params.has("gases")) {
+      const gasesParam = params.get("gases")!;
+      const customGasesFromUrl: Gas[] = [];
+      const selectedFromUrl: Record<string, boolean> = {};
+
+      // Start with default gases always available
+      const allGases = [...DEFAULT_AVAILABLE_GASES];
+
+      // Mark all default gases as unselected initially
+      DEFAULT_AVAILABLE_GASES.forEach(gas => {
+        selectedFromUrl[gas.name] = false;
+      });
+
+      gasesParam.split("_").forEach((gasStr) => {
+        const [o2Str, heStr] = gasStr.split("-");
+        const o2 = parseFloat(o2Str);
+        const he = parseFloat(heStr);
+
+        if (Number.isFinite(o2) && Number.isFinite(he) && o2 >= 0 && he >= 0 && o2 + he <= 100) {
+          const defaultGas = findDefaultGas(o2, he);
+
+          if (defaultGas) {
+            selectedFromUrl[defaultGas.name] = true;
+          } else {
+            const name = generateGasName(o2, he);
+            const customGas: Gas = { name, o2, he, editable: true };
+            customGasesFromUrl.push(customGas);
+            selectedFromUrl[name] = true;
+          }
+        }
+      });
+
+      // Combine default gases with custom gases from URL
+      const finalGases = [...allGases, ...customGasesFromUrl];
+      setAvailableGases(finalGases);
+      setSelectedGases(selectedFromUrl);
+    }
   }, []);
 
-  // Update URL whenever state changes
+  // Update URL whenever state changes (but not on initial mount)
   useEffect(() => {
+    // Skip the first run (initial mount)
+    if (!isMounted.current) {
+      isMounted.current = true;
+      return;
+    }
+
     const params = new URLSearchParams();
     params.set("startVolume", startVolume.toString());
     params.set("startO2", startO2.toString());
@@ -78,7 +139,12 @@ function GasBlender() {
     params.set("targetO2", targetO2.toString());
     params.set("targetHe", targetHe.toString());
     params.set("targetPressure", targetPressure.toString());
-
+    // Add only SELECTED gases to the URL
+    const selectedGasesOnly = availableGases.filter(gas => selectedGases[gas.name]);
+    const gasesParam = selectedGasesOnly
+      .map(gas => `${Number.isFinite(gas.o2) ? gas.o2 : ''}-${Number.isFinite(gas.he) ? gas.he : ''}`)
+      .join("_");
+    params.set("gases", gasesParam);
     window.location.hash = params.toString();
   }, [
     startVolume,
@@ -88,6 +154,8 @@ function GasBlender() {
     targetO2,
     targetHe,
     targetPressure,
+    availableGases,
+    selectedGases,
   ]);
 
   // Remove the handleCalculate function and instead calculate automatically:
@@ -185,14 +253,7 @@ function GasBlender() {
       }
 
       if (nextGas.editable && validMix) {
-        let derivedName: string;
-        if (nextGas.he === 0 && nextGas.o2 > 21 && nextGas.o2 < 41) {
-          derivedName = `Nitrox ${nextGas.o2}`;
-        } else {
-          derivedName = `${nextGas.o2}/${nextGas.he}`;
-        }
-
-        nextGas = { ...nextGas, name: derivedName };
+        nextGas = { ...nextGas, name: generateGasName(nextGas.o2, nextGas.he) };
       }
 
       newGases[index] = nextGas;
@@ -448,9 +509,6 @@ function GasBlender() {
           </button>
         </div>
 
-        {/* <button className="calculate-btn" onClick={handleCalculate}>
-          Calculate Blending Steps
-        </button> */}
 
         {blendingSteps && (
           <div className="card results">
