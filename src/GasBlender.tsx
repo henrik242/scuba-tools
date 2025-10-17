@@ -356,7 +356,7 @@ function GasBlender() {
               marginRight: "0.5rem",
             }}
           />
-          Synth Blender
+          Gas Blender
         </h1>
 
         <div className="card">
