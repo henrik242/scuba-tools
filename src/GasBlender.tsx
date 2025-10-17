@@ -20,7 +20,7 @@ const generateGasName = (o2: number, he: number): string => {
 
 // Helper function to find matching default gas
 const findDefaultGas = (o2: number, he: number): Gas | undefined => {
-  return DEFAULT_AVAILABLE_GASES.find(gas => gas.o2 === o2 && gas.he === he);
+  return DEFAULT_AVAILABLE_GASES.find((gas) => gas.o2 === o2 && gas.he === he);
 };
 
 function GasBlender() {
@@ -93,7 +93,7 @@ function GasBlender() {
       const allGases = [...DEFAULT_AVAILABLE_GASES];
 
       // Mark all default gases as unselected initially
-      DEFAULT_AVAILABLE_GASES.forEach(gas => {
+      DEFAULT_AVAILABLE_GASES.forEach((gas) => {
         selectedFromUrl[gas.name] = false;
       });
 
@@ -102,7 +102,13 @@ function GasBlender() {
         const o2 = parseFloat(o2Str);
         const he = parseFloat(heStr);
 
-        if (Number.isFinite(o2) && Number.isFinite(he) && o2 >= 0 && he >= 0 && o2 + he <= 100) {
+        if (
+          Number.isFinite(o2) &&
+          Number.isFinite(he) &&
+          o2 >= 0 &&
+          he >= 0 &&
+          o2 + he <= 100
+        ) {
           const defaultGas = findDefaultGas(o2, he);
 
           if (defaultGas) {
@@ -140,9 +146,14 @@ function GasBlender() {
     params.set("targetHe", targetHe.toString());
     params.set("targetPressure", targetPressure.toString());
     // Add only SELECTED gases to the URL
-    const selectedGasesOnly = availableGases.filter(gas => selectedGases[gas.name]);
+    const selectedGasesOnly = availableGases.filter(
+      (gas) => selectedGases[gas.name],
+    );
     const gasesParam = selectedGasesOnly
-      .map(gas => `${Number.isFinite(gas.o2) ? gas.o2 : ''}-${Number.isFinite(gas.he) ? gas.he : ''}`)
+      .map(
+        (gas) =>
+          `${Number.isFinite(gas.o2) ? gas.o2 : ""}-${Number.isFinite(gas.he) ? gas.he : ""}`,
+      )
       .join("_");
     params.set("gases", gasesParam);
     window.location.hash = params.toString();
@@ -508,7 +519,6 @@ function GasBlender() {
             + Add Custom Gas
           </button>
         </div>
-
 
         {blendingSteps && (
           <div className="card results">

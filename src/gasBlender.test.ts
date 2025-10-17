@@ -1447,7 +1447,9 @@ describe("Gas Blender - Professional Trimix Calculations", () => {
         expect(result.finalMix.he).toBeCloseTo(45, 0);
         expect(result.finalMix.pressure).toBeCloseTo(220, 0);
 
-        const drainStep = result.steps.find((s) => s.action.toLowerCase().includes("drain"));
+        const drainStep = result.steps.find((s) =>
+          s.action.toLowerCase().includes("drain"),
+        );
         const heStep = result.steps.find((s) => s.gas === "Helium");
 
         expect(drainStep).toBeDefined();
