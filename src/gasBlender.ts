@@ -250,8 +250,16 @@ export function calculateBlendingSteps(
       // Solve for P_drain where after adding He, then topping with Air+O2,
       // we hit exact target O2, N2, and He partial pressures.
       // Equation: P_drain * coeff = rhs (derived from N2 and O2 balance)
-      const coeff = fractions.o2 - 1 + fractions.he - fractions.n2 * (airO2Frac - 1) / airN2Frac;
-      const rhs = targetO2PP - targetPressure + targetHePP - targetN2PP * (airO2Frac - 1) / airN2Frac;
+      const coeff =
+        fractions.o2 -
+        1 +
+        fractions.he -
+        (fractions.n2 * (airO2Frac - 1)) / airN2Frac;
+      const rhs =
+        targetO2PP -
+        targetPressure +
+        targetHePP -
+        (targetN2PP * (airO2Frac - 1)) / airN2Frac;
 
       if (Math.abs(coeff) > 0.0001) {
         calculatedDrainPressure = rhs / coeff;
@@ -269,7 +277,8 @@ export function calculateBlendingSteps(
 
       if (Math.abs(denominator) > 0.0001) {
         calculatedDrainPressure =
-          (targetO2PP - targetPressure * airO2Frac + targetHePP * airO2Frac) / denominator;
+          (targetO2PP - targetPressure * airO2Frac + targetHePP * airO2Frac) /
+          denominator;
       } else {
         // Fallback: drain to make room for helium
         calculatedDrainPressure = targetPressure - deltaHe;
@@ -277,10 +286,15 @@ export function calculateBlendingSteps(
     }
 
     // Apply drain if calculated pressure is lower or we need to make room
-    if (calculatedDrainPressure < currentPressure - 0.5 ||
-        (currentPressure >= targetPressure - 0.5 && deltaHe > 0.5)) {
+    if (
+      calculatedDrainPressure < currentPressure - 0.5 ||
+      (currentPressure >= targetPressure - 0.5 && deltaHe > 0.5)
+    ) {
       needsDrain = true;
-      drainToPressure = Math.min(drainToPressure, Math.max(0, calculatedDrainPressure));
+      drainToPressure = Math.min(
+        drainToPressure,
+        Math.max(0, calculatedDrainPressure),
+      );
     }
   }
 
@@ -424,7 +438,10 @@ export function calculateBlendingSteps(
         }
 
         // Top up with air to reach target pressure
-        const finalRemainingPressure = roundTo(targetPressure - currentPressure, 1);
+        const finalRemainingPressure = roundTo(
+          targetPressure - currentPressure,
+          1,
+        );
         if (finalRemainingPressure > 0.1) {
           recordGasAddition(
             bestAirGas,
