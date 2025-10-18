@@ -13,17 +13,21 @@ export default defineConfig({
         "tank-full.svg",
         "tanks-empty.svg",
         "tanks-full.svg",
+        "og-image.png",
+        "og-image-square.png",
       ],
       manifest: {
-        name: "Synth Scuba",
+        name: "Synth Scuba - Gas Blender & Tank Calculator",
         short_name: "Synth Scuba",
-        description: "Gas blender and tank calculator for scuba diving",
+        description:
+          "Free web-based gas blender and tank calculator for scuba diving. Calculate nitrox and trimix blending steps, tank specifications, and buoyancy.",
         theme_color: "#1a1a1a",
         background_color: "#242424",
         display: "standalone",
         orientation: "portrait",
         scope: "/",
         start_url: "/",
+        categories: ["sports", "utilities"],
         icons: [
           {
             src: "/favicon.svg",
