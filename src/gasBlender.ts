@@ -236,9 +236,19 @@ export function calculateBlendingSteps(
     }
   }
 
+  // Get trimix gases for potential drain calculation
+  const trimixGases = availableGases
+    .filter((g) => g.he > 30)
+    .sort((a, b) => b.he - a.he);
+
   // Calculate drain pressure for helium blending scenarios
   // Sequence: Drain → Add He → Top with Air/O2
-  if (deltaHe > 0.5 && pureHe && airGases.length > 0) {
+  const heGasForCalc = pureHe || trimixGases[0];
+
+  if (deltaHe > 0.5 && heGasForCalc && airGases.length > 0) {
+    const heGasHeFrac = heGasForCalc.he / 100;
+    const heGasN2Frac = (100 - heGasForCalc.o2 - heGasForCalc.he) / 100;
+
     const airGas = airGases[0];
     const airO2Frac = airGas.o2 / 100;
     const airN2Frac = (100 - airGas.o2 - airGas.he) / 100;
@@ -247,29 +257,50 @@ export function calculateBlendingSteps(
 
     if (pureO2) {
       // Two-gas topping (O2 + Air) for precise control
-      // Solve for P_drain where after adding He, then topping with Air+O2,
-      // we hit exact target O2, N2, and He partial pressures.
-      // Equation: P_drain * coeff = rhs (derived from N2 and O2 balance)
-      const coeff =
-        fractions.o2 -
-        1 +
-        fractions.he -
-        (fractions.n2 * (airO2Frac - 1)) / airN2Frac;
-      const rhs =
-        targetO2PP -
-        targetPressure +
-        targetHePP -
-        (targetN2PP * (airO2Frac - 1)) / airN2Frac;
+      // For trimix He sources (not pure He), we need to account for O2 and N2 in the He gas
+      // Solve for P_drain where after adding He gas, then topping with O2+Air, we hit target
 
-      if (Math.abs(coeff) > 0.0001) {
-        calculatedDrainPressure = rhs / coeff;
+      if (pureHe) {
+        // Pure helium case: original formula
+        const coeff =
+          fractions.o2 -
+          1 +
+          fractions.he -
+          (fractions.n2 * (airO2Frac - 1)) / airN2Frac;
+        const rhs =
+          targetO2PP -
+          targetPressure +
+          targetHePP -
+          (targetN2PP * (airO2Frac - 1)) / airN2Frac;
+
+        if (Math.abs(coeff) > 0.0001) {
+          calculatedDrainPressure = rhs / coeff;
+        } else {
+          // Fallback to air-only formula
+          const denominator = fractions.o2 - (1 - fractions.he) * airO2Frac;
+          if (Math.abs(denominator) > 0.0001) {
+            calculatedDrainPressure =
+              (targetO2PP -
+                targetPressure * airO2Frac +
+                targetHePP * airO2Frac) /
+              denominator;
+          }
+        }
       } else {
-        // Fallback to air-only formula
-        const denominator = fractions.o2 - (1 - fractions.he) * airO2Frac;
-        if (Math.abs(denominator) > 0.0001) {
-          calculatedDrainPressure =
-            (targetO2PP - targetPressure * airO2Frac + targetHePP * airO2Frac) /
-            denominator;
+        // Trimix He source: need to account for O2 and N2 in the He gas
+        // Strategy: Use O2 for final topping to avoid adding more N2
+        // After drain and adding He gas, top with pure O2 to reach target
+        //
+        // Solve using nitrogen balance equation:
+        // P_drain * frac.n2 + heToAdd * heGasN2Frac = targetN2PP
+        // where: heToAdd = (targetHePP - P_drain * frac.he) / heGasHeFrac
+        //
+        // Substituting and solving for P_drain:
+        const coeff = fractions.n2 - (fractions.he * heGasN2Frac) / heGasHeFrac;
+        const rhs = targetN2PP - (targetHePP * heGasN2Frac) / heGasHeFrac;
+
+        if (Math.abs(coeff) > 0.0001) {
+          calculatedDrainPressure = rhs / coeff;
         }
       }
     } else {
@@ -313,11 +344,6 @@ export function calculateBlendingSteps(
       recordDrain(0, true);
     }
   }
-
-  // Get trimix gases for helium addition
-  const trimixGases = availableGases
-    .filter((g) => g.he > 30)
-    .sort((a, b) => b.he - a.he);
 
   // STEP 1: Add helium if needed
   if (deltaHe > 0.1) {
@@ -465,7 +491,7 @@ export function calculateBlendingSteps(
     pressure: roundTo(currentPressure, 1),
   };
 
-  // Check if we're close enough to target (more lenient tolerance)
+  // Check if we're close enough to target (lenient tolerance for rounding errors)
   const o2Error = Math.abs(finalMix.o2 - targetGas.o2);
   const heError = Math.abs(finalMix.he - targetGas.he);
   const pressureError = Math.abs(finalMix.pressure - targetGas.pressure);

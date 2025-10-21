@@ -1526,4 +1526,40 @@ describe("Gas Blender - Trimix Calculations", () => {
       });
     });
   });
+
+  describe("Trimix Helium Source Blending", () => {
+    it("should blend 18/45 at 220 bar from 14/13 at 113 bar using trimix 10/70", () => {
+      // Regression test: blending with trimix helium source (10/70) instead of pure helium
+      const availableGases: Gas[] = [
+        { name: "Air", o2: 21, he: 0, editable: false },
+        { name: "O2", o2: 100, he: 0, editable: false },
+        { name: "Nitrox 32", o2: 32, he: 0, editable: true },
+        { name: "10/70", o2: 10, he: 70, editable: true },
+      ];
+
+      const startingGas: TankState = {
+        volume: 11,
+        o2: 14,
+        he: 13,
+        pressure: 113,
+      };
+
+      const targetGas: TargetGas = {
+        o2: 18,
+        he: 45,
+        pressure: 220,
+      };
+
+      const result = calculateBlendingSteps(
+        startingGas,
+        targetGas,
+        availableGases,
+      );
+
+      expect(result.success).toBe(true);
+      expect(result.finalMix.o2).toBeCloseTo(18, 0);
+      expect(result.finalMix.he).toBeCloseTo(45, 0);
+      expect(result.finalMix.pressure).toBeCloseTo(220, 0);
+    });
+  });
 });
