@@ -304,15 +304,56 @@ export function calculateBlendingSteps(
         }
       }
     } else {
-      // Single-gas topping (Air only)
-      // After drain and He addition, top with air to reach target pressure
-      // Solve: P_drain * fractions.o2 + air_amount * airO2Frac = targetO2PP
-      const denominator = fractions.o2 - (1 - fractions.he) * airO2Frac;
+      // Single-gas topping (Nitrox/Air only, no pure O2)
+      // After drain and He addition, top with nitrox/air to reach target pressure
 
-      if (Math.abs(denominator) > 0.0001) {
-        calculatedDrainPressure =
-          (targetO2PP - targetPressure * airO2Frac + targetHePP * airO2Frac) /
-          denominator;
+      if (pureHe) {
+        // Pure helium + air/nitrox topping
+        // Solve: P_drain * fractions.o2 + air_amount * airO2Frac = targetO2PP
+        const denominator = fractions.o2 - (1 - fractions.he) * airO2Frac;
+
+        if (Math.abs(denominator) > 0.0001) {
+          calculatedDrainPressure =
+            (targetO2PP - targetPressure * airO2Frac + targetHePP * airO2Frac) /
+            denominator;
+        }
+      } else {
+        // Trimix He source + nitrox/air topping
+        // Need to account for O2 and N2 in the trimix helium gas
+        // Strategy: Use two-gas blend (trimix He + nitrox/air) to hit target
+        //
+        // After drain, we add trimix He gas and nitrox/air to reach target
+        // He balance: P_drain * frac.he + heToAdd * heGasHeFrac = targetHePP
+        // O2 balance: P_drain * frac.o2 + heToAdd * heGasO2Frac + airToAdd * airO2Frac = targetO2PP
+        // N2 balance: P_drain * frac.n2 + heToAdd * heGasN2Frac + airToAdd * airN2Frac = targetN2PP
+        // Pressure: P_drain + heToAdd + airToAdd = targetPressure
+        //
+        // From He balance: heToAdd = (targetHePP - P_drain * frac.he) / heGasHeFrac
+        // From Pressure: airToAdd = targetPressure - P_drain - heToAdd
+        //
+        // Substitute into O2 balance and solve for P_drain:
+        const heGasO2Frac = heGasForCalc.o2 / 100;
+
+        // heToAdd = (targetHePP - P_drain * frac.he) / heGasHeFrac
+        // airToAdd = targetPressure - P_drain - (targetHePP - P_drain * frac.he) / heGasHeFrac
+        // airToAdd = targetPressure - P_drain - targetHePP/heGasHeFrac + P_drain * frac.he/heGasHeFrac
+        // airToAdd = targetPressure - targetHePP/heGasHeFrac - P_drain * (1 - frac.he/heGasHeFrac)
+        //
+        // O2 balance:
+        // P_drain * frac.o2 + (targetHePP - P_drain * frac.he)/heGasHeFrac * heGasO2Frac +
+        //   (targetPressure - targetHePP/heGasHeFrac - P_drain * (1 - frac.he/heGasHeFrac)) * airO2Frac = targetO2PP
+        //
+        // Expanding and collecting P_drain terms:
+        const coeff = fractions.o2 -
+                      (fractions.he * heGasO2Frac) / heGasHeFrac -
+                      (1 - fractions.he / heGasHeFrac) * airO2Frac;
+        const rhs = targetO2PP -
+                    (targetHePP * heGasO2Frac) / heGasHeFrac -
+                    (targetPressure - targetHePP / heGasHeFrac) * airO2Frac;
+
+        if (Math.abs(coeff) > 0.0001) {
+          calculatedDrainPressure = rhs / coeff;
+        }
       }
     }
 
@@ -320,16 +361,22 @@ export function calculateBlendingSteps(
     if (
       calculatedDrainPressure !== undefined &&
       !isNaN(calculatedDrainPressure) &&
-      isFinite(calculatedDrainPressure) &&
-      calculatedDrainPressure > 0 &&
-      (calculatedDrainPressure < currentPressure - 0.5 ||
-        (currentPressure >= targetPressure - 0.5 && deltaHe > 0.5))
+      isFinite(calculatedDrainPressure)
     ) {
-      needsDrain = true;
-      drainToPressure = Math.min(
-        drainToPressure,
-        Math.max(0, calculatedDrainPressure),
-      );
+      // If calculated drain pressure is negative or very small when using trimix He (not pure He)
+      // without pure O2, drain to 0 (empty tank) - this means the mix is incompatible
+      // but can still be blended by starting fresh
+      if (calculatedDrainPressure <= 0.5 && !pureHe && !pureO2) {
+        needsDrain = true;
+        drainToPressure = 0;
+      } else if (
+        calculatedDrainPressure > 0.5 &&
+        (calculatedDrainPressure < currentPressure - 0.5 ||
+          (currentPressure >= targetPressure - 0.5 && deltaHe > 0.5))
+      ) {
+        needsDrain = true;
+        drainToPressure = Math.min(drainToPressure, calculatedDrainPressure);
+      }
     }
   }
 
