@@ -243,7 +243,7 @@ export function calculateBlendingSteps(
     const airO2Frac = airGas.o2 / 100;
     const airN2Frac = (100 - airGas.o2 - airGas.he) / 100;
 
-    let calculatedDrainPressure: number;
+    let calculatedDrainPressure: number | undefined;
 
     if (pureO2) {
       // Two-gas topping (O2 + Air) for precise control
@@ -265,9 +265,12 @@ export function calculateBlendingSteps(
         calculatedDrainPressure = rhs / coeff;
       } else {
         // Fallback to air-only formula
-        calculatedDrainPressure =
-          (targetO2PP - targetPressure * airO2Frac + targetHePP * airO2Frac) /
-          (fractions.o2 - (1 - fractions.he) * airO2Frac);
+        const denominator = fractions.o2 - (1 - fractions.he) * airO2Frac;
+        if (Math.abs(denominator) > 0.0001) {
+          calculatedDrainPressure =
+            (targetO2PP - targetPressure * airO2Frac + targetHePP * airO2Frac) /
+            denominator;
+        }
       }
     } else {
       // Single-gas topping (Air only)
@@ -279,16 +282,17 @@ export function calculateBlendingSteps(
         calculatedDrainPressure =
           (targetO2PP - targetPressure * airO2Frac + targetHePP * airO2Frac) /
           denominator;
-      } else {
-        // Fallback: drain to make room for helium
-        calculatedDrainPressure = targetPressure - deltaHe;
       }
     }
 
-    // Apply drain if calculated pressure is lower or we need to make room
+    // Apply drain only if we got a valid calculation AND it makes sense
     if (
-      calculatedDrainPressure < currentPressure - 0.5 ||
-      (currentPressure >= targetPressure - 0.5 && deltaHe > 0.5)
+      calculatedDrainPressure !== undefined &&
+      !isNaN(calculatedDrainPressure) &&
+      isFinite(calculatedDrainPressure) &&
+      calculatedDrainPressure > 0 &&
+      (calculatedDrainPressure < currentPressure - 0.5 ||
+        (currentPressure >= targetPressure - 0.5 && deltaHe > 0.5))
     ) {
       needsDrain = true;
       drainToPressure = Math.min(
