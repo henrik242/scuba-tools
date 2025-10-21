@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "npm run format && vite build && npm run postbuild",
+    "build": "npm run format && tsc && vite build && npm run postbuild",
     "postbuild": "cp dist/index.html dist/blender.html && cp dist/index.html dist/tanks.html",
     "preview": "vite preview",
     "test": "vitest --run",
