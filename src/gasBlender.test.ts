@@ -495,6 +495,38 @@ describe("Gas Blender - Trimix Calculations", () => {
   });
 
   describe("Edge Cases", () => {
+    it("should blend 14/13 at 100 bar to 18/45 at 220 bar WITHOUT draining", () => {
+      const startingGas: TankState = {
+        volume: 11,
+        o2: 14,
+        he: 13,
+        pressure: 100,
+      };
+
+      const targetGas: TargetGas = {
+        o2: 18,
+        he: 45,
+        pressure: 220,
+      };
+
+      const result = calculateBlendingSteps(
+        startingGas,
+        targetGas,
+        standardGases,
+      );
+
+      expect(result.success).toBe(true);
+      expect(result.steps.length).toBeGreaterThan(0);
+
+      // First step should NOT be a drain
+      expect(result.steps[0].action).not.toContain("Drain");
+
+      // Should achieve target within tolerance
+      expect(result.finalMix.o2).toBeCloseTo(18, 0);
+      expect(result.finalMix.he).toBeCloseTo(45, 0);
+      expect(result.finalMix.pressure).toBeCloseTo(220, 0);
+    });
+
     it("should handle zero pressure starting gas", () => {
       const startingGas: TankState = {
         volume: 12,
