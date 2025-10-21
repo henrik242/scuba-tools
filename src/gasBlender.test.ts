@@ -1561,5 +1561,45 @@ describe("Gas Blender - Trimix Calculations", () => {
       expect(result.finalMix.he).toBeCloseTo(45, 0);
       expect(result.finalMix.pressure).toBeCloseTo(220, 0);
     });
+
+    it("should blend 18/45 at 220 bar from 14/13 at 113 bar using only Nitrox 32 and 10/70", () => {
+      // Blending with only Nitrox 32 and 10/70 (no Air, no pure O2)
+      // Requires draining to empty because starting mix is incompatible
+      const availableGases: Gas[] = [
+        { name: "Nitrox 32", o2: 32, he: 0, editable: true },
+        { name: "10/70", o2: 10, he: 70, editable: true },
+      ];
+
+      const startingGas: TankState = {
+        volume: 11,
+        o2: 14,
+        he: 13,
+        pressure: 113,
+      };
+
+      const targetGas: TargetGas = {
+        o2: 18,
+        he: 45,
+        pressure: 220,
+      };
+
+      const result = calculateBlendingSteps(
+        startingGas,
+        targetGas,
+        availableGases,
+      );
+
+      expect(result.success).toBe(true);
+      expect(result.finalMix.o2).toBeCloseTo(18, 0);
+      expect(result.finalMix.he).toBeCloseTo(45, 0);
+      expect(result.finalMix.pressure).toBeCloseTo(220, 0);
+
+      // Should drain completely to 0
+      const drainStep = result.steps.find((s) =>
+        s.action.toLowerCase().includes("drain"),
+      );
+      expect(drainStep).toBeDefined();
+      expect(drainStep!.toPressure).toBe(0);
+    });
   });
 });
