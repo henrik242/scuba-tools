@@ -143,7 +143,7 @@ export function calculateBlendingSteps(
     steps.push({
       action: forceComplete
         ? "Drain tank completely"
-        : `Drain to ${roundTo(newPressure, 2)} bar`,
+        : `Drain to ${roundTo(newPressure, 1)} bar`,
       fromPressure: roundTo(previousPressure, 2),
       toPressure: roundTo(newPressure, 2),
       drainedPressure: roundTo(previousPressure - newPressure, 2),
