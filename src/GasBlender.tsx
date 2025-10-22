@@ -169,7 +169,7 @@ function GasBlender() {
     selectedGases,
   ]);
 
-  // Remove the handleCalculate function and instead calculate automatically:
+  // Calculate blending steps automatically
   useEffect(() => {
     const startingGas = {
       volume: parseFloat(startVolume.toString()),
@@ -339,7 +339,6 @@ function GasBlender() {
     setStartPressure(0);
     setStartO2(0);
     setStartHe(0);
-    setBlendingSteps(null);
   };
 
   return (
@@ -363,24 +362,6 @@ function GasBlender() {
           <h2>Starting Gas</h2>
           <div className="form-grid">
             <div className="form-group">
-              <label>Tank Volume (L)</label>
-              <input
-                type="number"
-                value={startVolume}
-                onChange={(e) => setStartVolume(parseFloat(e.target.value))}
-                step="0.1"
-              />
-            </div>
-            <div className="form-group">
-              <label>Pressure (bar)</label>
-              <input
-                type="number"
-                value={startPressure}
-                onChange={(e) => setStartPressure(parseFloat(e.target.value))}
-                step="1"
-              />
-            </div>
-            <div className="form-group">
               <label>O₂ (%)</label>
               <input
                 type="number"
@@ -402,6 +383,24 @@ function GasBlender() {
                 step="1"
               />
             </div>
+            <div className="form-group">
+              <label>Pressure (bar)</label>
+              <input
+                type="number"
+                value={startPressure}
+                onChange={(e) => setStartPressure(parseFloat(e.target.value))}
+                step="1"
+              />
+            </div>
+            <div className="form-group">
+              <label>Tank Volume (L)</label>
+              <input
+                type="number"
+                value={startVolume}
+                onChange={(e) => setStartVolume(parseFloat(e.target.value))}
+                step="0.1"
+              />
+            </div>
           </div>
           <div className="starting-gas-footer">
             <div className="mix-display">
@@ -421,15 +420,6 @@ function GasBlender() {
           <h2>Target Gas</h2>
           <div className="form-grid">
             <div className="form-group">
-              <label>Pressure (bar)</label>
-              <input
-                type="number"
-                value={targetPressure}
-                onChange={(e) => setTargetPressure(parseFloat(e.target.value))}
-                step="1"
-              />
-            </div>
-            <div className="form-group">
               <label>O₂ (%)</label>
               <input
                 type="number"
@@ -448,6 +438,15 @@ function GasBlender() {
                 onChange={(e) => setTargetHe(parseFloat(e.target.value))}
                 min="0"
                 max="100"
+                step="1"
+              />
+            </div>
+            <div className="form-group">
+              <label>Pressure (bar)</label>
+              <input
+                type="number"
+                value={targetPressure}
+                onChange={(e) => setTargetPressure(parseFloat(e.target.value))}
                 step="1"
               />
             </div>
@@ -530,87 +529,83 @@ function GasBlender() {
                 No blending needed - tank is already at target mix!
               </p>
             ) : (
-              <div className="steps-list">
-                {blendingSteps.steps.map((step, index) => (
-                  <div key={index} className="step">
-                    <div className="step-number">{index + 1}</div>
-                    <div className="step-content">
-                      <div className="step-action">{step.action}</div>
-                      <div className="step-details">
-                        <div className="detail-row">
-                          <span className="label">Pressure:</span>
-                          <span className="value">
-                            {step.fromPressure.toFixed(1)} bar →{" "}
-                            {step.toPressure.toFixed(1)} bar
-                            {step.addedPressure && (
-                              <span className="added">
-                                {" "}
-                                (+{step.addedPressure.toFixed(1)} bar)
-                              </span>
-                            )}
-                            {step.drainedPressure && (
-                              <span className="drained">
-                                {" "}
-                                (-{step.drainedPressure.toFixed(1)} bar)
-                              </span>
-                            )}
-                          </span>
-                        </div>
-                        <div className="detail-row">
-                          <span className="label">Mix:</span>
-                          <span className="value">
-                            {step.currentMix} → <strong>{step.newMix}</strong>
-                          </span>
+              <>
+                <div className="steps-list">
+                  {blendingSteps.steps.map((step, index) => (
+                    <div key={index} className="step">
+                      <div className="step-number">{index + 1}</div>
+                      <div className="step-content">
+                        <div className="step-action">{step.action}</div>
+                        <div className="step-details">
+                          <div className="detail-row">
+                            <span className="label">Pressure:</span>
+                            <span className="value">
+                              {step.fromPressure.toFixed(1)} bar →{" "}
+                              {step.toPressure.toFixed(1)} bar
+                              {step.addedPressure && (
+                                <span className="added">
+                                  {" "}
+                                  (+{step.addedPressure.toFixed(1)} bar)
+                                </span>
+                              )}
+                              {step.drainedPressure && (
+                                <span className="drained">
+                                  {" "}
+                                  (-{step.drainedPressure.toFixed(1)} bar)
+                                </span>
+                              )}
+                            </span>
+                          </div>
+                          <div className="detail-row">
+                            <span className="label">Mix:</span>
+                            <span className="value">
+                              {step.currentMix} → <strong>{step.newMix}</strong>
+                            </span>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-            )}
+                  ))}
+                </div>
 
-            <div className="final-result">
-              <h3>Final Result</h3>
-              <div className="final-mix">
-                <div className="final-detail">
-                  <span className="label">Mix:</span>
-                  <span className="value">
-                    {blendingSteps.finalMix.o2}/{blendingSteps.finalMix.he}
-                  </span>
-                </div>
-                <div className="final-detail">
-                  <span className="label">Pressure:</span>
-                  <span className="value">
-                    {blendingSteps.finalMix.pressure} bar
-                  </span>
-                </div>
-              </div>
-              {Math.abs(blendingSteps.finalMix.o2 - targetO2) > 0.5 ||
-              Math.abs(blendingSteps.finalMix.he - targetHe) > 0.5 ? (
-                <div className="warning">
-                  ⚠️ Final mix differs from target. Adjust available gases or
-                  starting conditions.
-                </div>
-              ) : (
-                <div className="success">✓ Target mix achieved!</div>
-              )}
-              {blendingSteps.success &&
-                Object.keys(blendingSteps.gasUsage).length > 0 && (
-                  <div className="gas-usage-summary">
-                    <h4>Gas Usage:</h4>
-                    <div className="gas-usage-list">
-                      {Object.entries(blendingSteps.gasUsage).map(
-                        ([gasName, liters]) => (
-                          <div key={gasName} className="gas-usage-item">
-                            <span>{gasName}:</span>
-                            <span>{liters.toFixed(1)} L</span>
-                          </div>
-                        ),
-                      )}
+                <div className="final-result">
+                  <h3>Final Result</h3>
+                  <div className="final-mix">
+                    <div className="final-detail">
+                      <span className="label">Mix:</span>
+                      <span className="value">
+                        {blendingSteps.finalMix.o2}/{blendingSteps.finalMix.he}
+                      </span>
+                    </div>
+                    <div className="final-detail">
+                      <span className="label">Pressure:</span>
+                      <span className="value">
+                        {blendingSteps.finalMix.pressure} bar
+                      </span>
                     </div>
                   </div>
-                )}
-            </div>
+                  {Math.abs(blendingSteps.finalMix.o2 - targetO2) <= 0.5 &&
+                    Math.abs(blendingSteps.finalMix.he - targetHe) <= 0.5 && (
+                      <div className="success">✓ Target mix achieved!</div>
+                    )}
+                  {Object.keys(blendingSteps.gasUsage).length > 0 && (
+                    <div className="gas-usage-summary">
+                      <h4>Gas Usage:</h4>
+                      <div className="gas-usage-list">
+                        {Object.entries(blendingSteps.gasUsage).map(
+                          ([gasName, liters]) => (
+                            <div key={gasName} className="gas-usage-item">
+                              <span>{gasName}:</span>
+                              <span>{liters.toFixed(1)} L</span>
+                            </div>
+                          ),
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
           </div>
         )}
       </div>

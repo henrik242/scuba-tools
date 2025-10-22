@@ -344,12 +344,14 @@ export function calculateBlendingSteps(
         //   (targetPressure - targetHePP/heGasHeFrac - P_drain * (1 - frac.he/heGasHeFrac)) * airO2Frac = targetO2PP
         //
         // Expanding and collecting P_drain terms:
-        const coeff = fractions.o2 -
-                      (fractions.he * heGasO2Frac) / heGasHeFrac -
-                      (1 - fractions.he / heGasHeFrac) * airO2Frac;
-        const rhs = targetO2PP -
-                    (targetHePP * heGasO2Frac) / heGasHeFrac -
-                    (targetPressure - targetHePP / heGasHeFrac) * airO2Frac;
+        const coeff =
+          fractions.o2 -
+          (fractions.he * heGasO2Frac) / heGasHeFrac -
+          (1 - fractions.he / heGasHeFrac) * airO2Frac;
+        const rhs =
+          targetO2PP -
+          (targetHePP * heGasO2Frac) / heGasHeFrac -
+          (targetPressure - targetHePP / heGasHeFrac) * airO2Frac;
 
         if (Math.abs(coeff) > 0.0001) {
           calculatedDrainPressure = rhs / coeff;
