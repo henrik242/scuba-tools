@@ -44,14 +44,16 @@ describe("Gas Usage Tracking", () => {
       }
     });
 
-    // Total gas used should equal tank volume × target pressure
+    // Total gas used should approximately equal tank volume × target pressure
+    // With real gas Z-factors, there's a small deviation from ideal gas
     const totalUsed = Object.values(result.gasUsage).reduce(
       (sum, val) => sum + val,
       0,
     );
     const expected = startingGas.volume * targetGas.pressure;
 
-    expect(totalUsed).toBeCloseTo(expected, 0);
+    // Real gas: allow ~1% tolerance due to Z-factor effects
+    expect(Math.abs(totalUsed - expected)).toBeLessThan(expected * 0.01);
 
     // Should have used Helium, O2, and Air
     expect(Object.keys(result.gasUsage).length).toBeGreaterThan(0);
