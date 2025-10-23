@@ -190,6 +190,13 @@ export function gasToMoleEquivalents(
   hePercent: number,
   pressure: number,
 ): { o2: number; he: number; n2: number; total: number } {
+  // Validate gas composition
+  if (o2Percent + hePercent > 100) {
+    throw new Error(
+      `Invalid gas composition: O2 (${o2Percent}%) + He (${hePercent}%) exceeds 100%`,
+    );
+  }
+
   const o2Frac = o2Percent / 100;
   const heFrac = hePercent / 100;
   const n2Frac = Math.max(0, 1 - o2Frac - heFrac);
@@ -214,7 +221,7 @@ export function gasToMoleEquivalents(
 }
 
 /**
- * Convert mole equivalents back to gas composition at a given pressure
+ * Convert mole equivalents back to gas composition
  * This is simpler than it seems: mole equivalents already preserve composition
  * The mole fractions directly give us the gas percentages
  */
@@ -222,7 +229,6 @@ export function moleEquivalentsToGas(
   o2Moles: number,
   heMoles: number,
   n2Moles: number,
-  targetPressure: number,
 ): { o2Percent: number; hePercent: number; n2Percent: number } {
   const totalMoles = o2Moles + heMoles + n2Moles;
 
@@ -265,6 +271,13 @@ export function solveForAddPressure(
   addGasHePercent: number,
   targetTotalMoles: number,
 ): number {
+  // Validate source gas composition
+  if (addGasO2Percent + addGasHePercent > 100) {
+    throw new Error(
+      `Invalid source gas composition: O2 (${addGasO2Percent}%) + He (${addGasHePercent}%) exceeds 100%`,
+    );
+  }
+
   const currentTotalMoles = currentO2Moles + currentHeMoles + currentN2Moles;
   const deltaMoles = targetTotalMoles - currentTotalMoles;
 
@@ -273,7 +286,7 @@ export function solveForAddPressure(
   }
 
   // Initial guess based on ideal gas (will be refined)
-  let addPressure = deltaMoles * 1.0; // rough estimate
+  let addPressure = deltaMoles; // rough estimate
 
   // Iteratively solve for correct add pressure
   for (let iter = 0; iter < 30; iter++) {
@@ -333,6 +346,13 @@ export function solveForComponentAddPressure(
   targetComponentMoles: number,
   component: "o2" | "he" | "n2",
 ): number {
+  // Validate source gas composition
+  if (addGasO2Percent + addGasHePercent > 100) {
+    throw new Error(
+      `Invalid source gas composition: O2 (${addGasO2Percent}%) + He (${addGasHePercent}%) exceeds 100%`,
+    );
+  }
+
   const addGasN2Percent = Math.max(0, 100 - addGasO2Percent - addGasHePercent);
 
   const currentComponent =
@@ -419,6 +439,13 @@ export function addGasToTank(
   n2Moles: number;
   newPressure: number;
 } {
+  // Validate source gas composition
+  if (addGasO2Percent + addGasHePercent > 100) {
+    throw new Error(
+      `Invalid source gas composition: O2 (${addGasO2Percent}%) + He (${addGasHePercent}%) exceeds 100%`,
+    );
+  }
+
   if (addPressure <= 0) {
     return {
       o2Moles: currentO2Moles,

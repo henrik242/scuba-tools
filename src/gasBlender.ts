@@ -164,7 +164,6 @@ function simulateBlendWithDrain(params: DrainSimulationParams): number {
     final.o2Moles,
     final.heMoles,
     final.n2Moles,
-    targetPressure,
   );
 
   return (
@@ -186,7 +185,11 @@ export function calculateBlendingSteps(
   const gasUsage: Record<string, number> = {};
 
   // Validate inputs
-  if (targetGas.o2 + targetGas.he > 100) {
+  if (
+    Number.isFinite(targetGas.o2) &&
+    Number.isFinite(targetGas.he) &&
+    targetGas.o2 + targetGas.he > 100
+  ) {
     return {
       steps: [],
       finalMix: {
@@ -196,7 +199,7 @@ export function calculateBlendingSteps(
       },
       gasUsage: {},
       success: false,
-      error: "Target O₂ + He exceeds 100%",
+      error: `Target O₂ (${targetGas.o2}%) + He (${targetGas.he}%) exceeds 100%`,
     };
   }
 
@@ -237,7 +240,6 @@ export function calculateBlendingSteps(
       currentO2Moles,
       currentHeMoles,
       currentN2Moles,
-      currentPressure,
     );
 
     return {
@@ -426,7 +428,6 @@ export function calculateBlendingSteps(
         simulated.o2Moles,
         simulated.heMoles,
         simulated.n2Moles,
-        targetPressure,
       );
 
       // If we still have too much O2 after filling with lowest O2 gas, we need to drain
@@ -579,7 +580,6 @@ export function calculateBlendingSteps(
             final.o2Moles,
             final.heMoles,
             final.n2Moles,
-            targetPressure,
           );
           noDrainError =
             Math.abs(finalComp.o2Percent - targetO2Pct) +
@@ -694,7 +694,6 @@ export function calculateBlendingSteps(
           testAdded.o2Moles,
           testAdded.heMoles,
           testAdded.n2Moles,
-          targetPressure,
         );
 
         const diff =

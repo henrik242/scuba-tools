@@ -126,7 +126,7 @@ describe("Real Gas Z-factor Calculations", () => {
   describe("Mole Equivalents to Gas Conversion", () => {
     it("should round-trip air composition", () => {
       const moles = gasToMoleEquivalents(21, 0, 200);
-      const gas = moleEquivalentsToGas(moles.o2, moles.he, moles.n2, 200);
+      const gas = moleEquivalentsToGas(moles.o2, moles.he, moles.n2);
 
       expect(gas.o2Percent).toBeCloseTo(21, 1);
       expect(gas.hePercent).toBeCloseTo(0, 1);
@@ -135,7 +135,7 @@ describe("Real Gas Z-factor Calculations", () => {
 
     it("should round-trip trimix 18/45", () => {
       const moles = gasToMoleEquivalents(18, 45, 200);
-      const gas = moleEquivalentsToGas(moles.o2, moles.he, moles.n2, 200);
+      const gas = moleEquivalentsToGas(moles.o2, moles.he, moles.n2);
 
       expect(gas.o2Percent).toBeCloseTo(18, 1);
       expect(gas.hePercent).toBeCloseTo(45, 1);
@@ -143,7 +143,7 @@ describe("Real Gas Z-factor Calculations", () => {
     });
 
     it("should handle empty tank", () => {
-      const gas = moleEquivalentsToGas(0, 0, 0, 200);
+      const gas = moleEquivalentsToGas(0, 0, 0);
 
       expect(gas.o2Percent).toBe(0);
       expect(gas.hePercent).toBe(0);
@@ -165,7 +165,6 @@ describe("Real Gas Z-factor Calculations", () => {
         result.o2Moles,
         result.heMoles,
         result.n2Moles,
-        result.newPressure,
       );
       expect(gas.o2Percent).toBeCloseTo(100, 1);
     });
@@ -184,7 +183,6 @@ describe("Real Gas Z-factor Calculations", () => {
         result.o2Moles,
         result.heMoles,
         result.n2Moles,
-        result.newPressure,
       );
 
       // Calculate expected: 50 bar O2 + 150 bar air (21% O2)
@@ -218,7 +216,6 @@ describe("Real Gas Z-factor Calculations", () => {
         step2.o2Moles,
         step2.heMoles,
         step2.n2Moles,
-        step2.newPressure,
       );
 
       // Should have significant helium and some oxygen
@@ -242,7 +239,6 @@ describe("Real Gas Z-factor Calculations", () => {
         result.o2Moles,
         result.heMoles,
         result.n2Moles,
-        result.newPressure,
       );
 
       expect(gas.o2Percent).toBeCloseTo(21, 1);
@@ -382,7 +378,6 @@ describe("Real Gas Z-factor Calculations", () => {
         result.o2Moles,
         result.heMoles,
         result.n2Moles,
-        150,
       );
       // Started with air (21% O2) at 100 bar, added pure O2 to reach 150 bar
       // Final mix should have more O2 than initial air
@@ -418,13 +413,11 @@ describe("Real Gas Z-factor Calculations", () => {
         result.o2Moles,
         result.heMoles,
         result.n2Moles,
-        120,
       );
       const initialComp = moleEquivalentsToGas(
         initial.o2,
         initial.he,
         initial.n2,
-        100,
       );
       expect(finalComp.o2Percent).toBeGreaterThan(initialComp.o2Percent);
     });

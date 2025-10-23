@@ -171,22 +171,44 @@ function GasBlender() {
 
   // Calculate blending steps automatically
   useEffect(() => {
-    const startingGas = {
-      volume: parseFloat(startVolume.toString()),
-      o2: parseFloat(startO2.toString()),
-      he: parseFloat(startHe.toString()),
-      pressure: parseFloat(startPressure.toString()),
-    };
-    const targetGas = {
-      o2: parseFloat(targetO2.toString()),
-      he: parseFloat(targetHe.toString()),
-      pressure: parseFloat(targetPressure.toString()),
-    };
-    const selected = availableGases.filter(
-      (gas) => isGasValid(gas) && selectedGases[gas.name],
-    );
-    const result = calculateBlendingSteps(startingGas, targetGas, selected);
-    setBlendingSteps(result);
+    // Don't calculate if there's a gas error (invalid composition)
+    if (gasError) {
+      setBlendingSteps(null);
+      return;
+    }
+
+    try {
+      const startingGas = {
+        volume: parseFloat(startVolume.toString()),
+        o2: parseFloat(startO2.toString()),
+        he: parseFloat(startHe.toString()),
+        pressure: parseFloat(startPressure.toString()),
+      };
+      const targetGas = {
+        o2: parseFloat(targetO2.toString()),
+        he: parseFloat(targetHe.toString()),
+        pressure: parseFloat(targetPressure.toString()),
+      };
+      const selected = availableGases.filter(
+        (gas) => isGasValid(gas) && selectedGases[gas.name],
+      );
+      const result = calculateBlendingSteps(startingGas, targetGas, selected);
+      setBlendingSteps(result);
+    } catch (error) {
+      // If there's a validation error from the low-level functions, show it
+      if (error instanceof Error && error.message.includes("Invalid")) {
+        setBlendingSteps({
+          steps: [],
+          finalMix: { o2: 0, he: 0, pressure: 0 },
+          gasUsage: {},
+          success: false,
+          error: error.message,
+        });
+      } else {
+        // Re-throw unexpected errors
+        throw error;
+      }
+    }
   }, [
     startVolume,
     startO2,
@@ -197,6 +219,7 @@ function GasBlender() {
     targetPressure,
     availableGases,
     selectedGases,
+    gasError,
   ]);
 
   const toggleGas = (gas: Gas) => {
@@ -249,6 +272,27 @@ function GasBlender() {
         [field]: numericValue,
       };
 
+      // Check for O2 + He > 100%
+      if (
+        Number.isFinite(nextGas.o2) &&
+        Number.isFinite(nextGas.he) &&
+        nextGas.o2 + nextGas.he > 100
+      ) {
+        setGasError(
+          `Source gas O₂ (${nextGas.o2}%) + He (${nextGas.he}%) exceeds 100%`,
+        );
+        // Still update the gas to show the invalid values
+        newGases[index] = nextGas;
+
+        // Update selectedGases to uncheck if it was checked
+        setSelectedGases((prevSelected) => ({
+          ...prevSelected,
+          [nextGas.name]: false,
+        }));
+
+        return newGases;
+      }
+
       const validMix = isGasValid(nextGas);
 
       if (validMix) {
@@ -261,6 +305,9 @@ function GasBlender() {
           setGasError(`Gas ${nextGas.o2}/${nextGas.he} already exists.`);
           return prevGases;
         }
+
+        // Only clear error if the mix is valid
+        setGasError(null);
       }
 
       if (nextGas.editable && validMix) {
@@ -268,7 +315,6 @@ function GasBlender() {
       }
 
       newGases[index] = nextGas;
-      setGasError(null);
 
       setSelectedGases((prevSelected) => {
         const updated = { ...prevSelected };
@@ -389,6 +435,8 @@ function GasBlender() {
                 type="number"
                 value={startPressure}
                 onChange={(e) => setStartPressure(parseFloat(e.target.value))}
+                min="0"
+                max="350"
                 step="1"
               />
             </div>
@@ -447,6 +495,8 @@ function GasBlender() {
                 type="number"
                 value={targetPressure}
                 onChange={(e) => setTargetPressure(parseFloat(e.target.value))}
+                min="0"
+                max="350"
                 step="1"
               />
             </div>
