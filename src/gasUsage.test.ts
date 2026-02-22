@@ -1,10 +1,9 @@
-import { describe, expect, it } from "vitest";
 import {
   calculateBlendingSteps,
   Gas,
   TankState,
   TargetGas,
-} from "./gasBlender";
+} from "./gasBlender.ts";
 
 describe("Gas Usage Tracking", () => {
   const standardGases: Gas[] = [

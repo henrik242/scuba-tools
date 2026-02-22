@@ -1,9 +1,8 @@
-import { describe, expect, it } from "vitest";
 import {
   calculateTankMetric,
   calculateTankImperial,
   TankInput,
-} from "./tankCalculator";
+} from "./tankCalculator.ts";
 
 describe("Tank Calculator - Scuba Tank Calculations", () => {
   describe("Real-world Steel Tanks (Metric)", () => {

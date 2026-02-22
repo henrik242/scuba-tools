@@ -5,11 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "npm run format && tsc && vite build && npm run postbuild",
+    "build": "bun run format && tsc && vite build && bun run postbuild",
     "postbuild": "cp dist/index.html dist/blender.html && cp dist/index.html dist/tanks.html",
     "preview": "vite preview",
-    "test": "vitest --run",
-    "format": "npx prettier . --write"
+    "test": "bun test",
+    "format": "bunx prettier . --write"
   },
   "devDependencies": {
     "@types/react": "^19.2.2",
@@ -18,8 +18,7 @@
     "prettier": "^3.6.2",
     "typescript": "^5.9.3",
     "vite": "npm:rolldown-vite@^7.1.14",
-    "vite-plugin-pwa": "^1.1.0",
-    "vitest": "^3.2.4"
+    "vite-plugin-pwa": "^1.1.0"
   },
   "dependencies": {
     "@vitejs/plugin-react": "^5.0.4",

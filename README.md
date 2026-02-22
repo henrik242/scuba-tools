@@ -33,10 +33,10 @@ Calculates buoyancy and specifications for common scuba tanks. Supports:
 ## Development
 
 ```bash
-npm install        # install dependencies
-npm run dev        # start dev server
-npm test           # run tests
-npm run build      # format, type-check, and build
+bun install        # install dependencies
+bun run dev        # start dev server
+bun test           # run tests
+bun run build      # format, type-check, and build
 ```
 
 The build copies `dist/index.html` to `dist/blender.html` and `dist/tanks.html` so each route works as a standalone page.

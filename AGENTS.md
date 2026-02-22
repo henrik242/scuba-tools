@@ -33,14 +33,14 @@ vite.config.ts          # Includes PWA plugin (vite-plugin-pwa)
 ## Essential commands
 
 ```bash
-npm install          # install deps
-npm test             # run all tests (vitest --run)
-npm run dev          # dev server
-npm run build        # format + type-check + vite build + postbuild copies
-npm run format       # prettier
+bun install          # install deps
+bun test             # run all tests (bun test)
+bun run dev          # dev server
+bun run build        # format + type-check + vite build + postbuild copies
+bun run format       # prettier
 ```
 
-`npm run build` runs Prettier automatically — do not worry about formatting before building.
+`bun run build` runs Prettier automatically — do not worry about formatting before building.
 
 After a build, `dist/` contains `index.html`, `blender.html`, and `tanks.html` (the latter two are copies of `index.html` produced by the `postbuild` script).
 
@@ -102,7 +102,7 @@ A few scuba-specific things to keep in mind:
 
 - Run `npm test` after **any** change to `gasBlender.ts` or `tankCalculator.ts`.
 - The test suite (`gasBlender.test.ts`) covers ~100 scenarios including edge cases and real-world blends. If a new algorithm path is added, add corresponding tests.
-- Tests use `vitest` and plain `expect` assertions — no mocking framework is needed for the pure-function files.
+- Tests use `bun test` with plain `expect` assertions — no mocking framework is needed for the pure-function files.
 - Gas usage is tracked as `pressure × tank volume` (in litres); the `gasUsage.test.ts` file verifies this separately.
 
 ## What to avoid
