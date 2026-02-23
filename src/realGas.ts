@@ -8,10 +8,13 @@
  * causes a systematic O₂ enrichment of ~0.8% absolute in the final blend,
  * which exceeds the ±0.5% professional tolerance.
  *
- * Representative Z values at 20°C:
- *   O₂: Z(100)≈0.975  Z(200)≈0.924  Z(300)≈0.860
+ * Representative Z values at 20°C (computed from the polynomial fit below):
+ *   O₂: Z(100)≈0.975  Z(200)≈0.924  Z(300)≈0.847
  *   N₂: Z(100)≈0.990  Z(200)≈0.978  Z(300)≈0.964
  *   He: Z(100)≈1.003  Z(200)≈1.006  Z(300)≈1.009  (nearly ideal)
+ *
+ * Note: NIST data for O₂ at 300 bar gives Z ≈ 0.87.  The quadratic fit
+ * diverges slightly at the upper end of its validated range (0–300 bar).
  */
 
 // Z(P) = 1 + a1·P + a2·P²  at 20°C (293 K), P in bar

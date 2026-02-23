@@ -396,12 +396,9 @@ describe("Gas Blender - Trimix Calculations", () => {
         standardGases,
       );
 
-      if (result.success) {
-        expect(result.finalMix.o2).toBeCloseTo(21, 0);
-        expect(result.finalMix.he).toBeCloseTo(30, 0);
-      } else {
-        expect(result.finalMix.he).toBeCloseTo(30, 0);
-      }
+      expect(result.success).toBe(true);
+      expect(result.finalMix.o2).toBeCloseTo(21, 0);
+      expect(result.finalMix.he).toBeCloseTo(30, 0);
     });
 
     it("should blend 25/25 (balanced mix)", () => {
@@ -690,9 +687,19 @@ describe("Gas Blender - Trimix Calculations", () => {
         expect(step).toHaveProperty("toPressure");
         expect(step).toHaveProperty("currentMix");
         expect(step).toHaveProperty("newMix");
-        expect(step.toPressure).toBeGreaterThanOrEqual(
-          step.fromPressure - (step.drainedPressure || 0),
-        );
+        if (step.drainedPressure && step.drainedPressure > 0) {
+          expect(step.toPressure).toBeLessThan(step.fromPressure);
+          expect(step.drainedPressure).toBeCloseTo(
+            step.fromPressure - step.toPressure,
+            2,
+          );
+        } else if (step.addedPressure && step.addedPressure > 0) {
+          expect(step.toPressure).toBeGreaterThan(step.fromPressure);
+          expect(step.addedPressure).toBeCloseTo(
+            step.toPressure - step.fromPressure,
+            1,
+          );
+        }
       });
     });
 
@@ -1152,7 +1159,8 @@ describe("Gas Blender - Trimix Calculations", () => {
           standardGases,
         );
 
-        // This requires diluting with air
+        // This requires diluting 32% O2 with 21% air. The O2 in air prevents
+        // hitting exactly 21% without a pure N2 source or a complete drain.
         if (result.success) {
           expect(Math.abs(result.finalMix.o2 - 21)).toBeLessThanOrEqual(0.5);
         }
