@@ -754,9 +754,9 @@ describe("Gas Blender - Trimix Calculations", () => {
       const result = calculateBlendingSteps(startingGas, targetGas, gases);
 
       expect(result.success).toBe(true);
-      expect(result.finalMix.o2).toBe(18);
-      expect(result.finalMix.he).toBe(40);
-      expect(result.finalMix.pressure).toBe(220);
+      expect(result.finalMix.o2).toBeCloseTo(18, 0);
+      expect(result.finalMix.he).toBeCloseTo(40, 0);
+      expect(result.finalMix.pressure).toBeCloseTo(220, 0);
 
       // Should use Air, not Nitrox 32, for the final top-up
       const airStep = result.steps.find((s) => s.gas === "Air");

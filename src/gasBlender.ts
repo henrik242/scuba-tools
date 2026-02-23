@@ -1,7 +1,16 @@
 /**
  * Gas Blender Calculator
- * Uses partial pressure calculations for accurate gas blending
+ *
+ * Uses real gas partial pressure calculations for accurate gas blending.
+ *
+ * Internal state is tracked as mole-equivalent pressures (MEP = n·R·T/V,
+ * proportional to moles). This corrects for the non-ideal behaviour of
+ * O₂ and N₂ at high pressures (van der Waals Z ≠ 1). He is nearly ideal.
+ *
+ * All inputs and outputs remain in gauge bar, as read on a pressure gauge.
  */
+
+import { gasZ, mepToGauge } from "./realGas.ts";
 
 export interface Gas {
   name: string;
@@ -58,8 +67,11 @@ const createMixLabel = (o2Fraction: number, heFraction: number): string =>
   `${toPercentLabel(o2Fraction)}/${toPercentLabel(heFraction)}`;
 
 /**
- * Calculate gas blending steps
- * Algorithm: 1) Drain, 2) Add Helium, 3) Add O2, 4) Add Air/Nitrox
+ * Calculate gas blending steps.
+ * Algorithm: 1) Drain if needed, 2) Add Helium, 3) Add O2 and/or Air/Nitrox.
+ *
+ * Internal computation uses mole-equivalent pressures (MEP) to account for
+ * real gas compressibility. Step pressures shown to the user are gauge bar.
  */
 export function calculateBlendingSteps(
   startingGas: TankState,
@@ -84,43 +96,52 @@ export function calculateBlendingSteps(
     };
   }
 
-  // Target state
+  // Target state — compute MEPs (mole-equivalent pressures) using real gas Z
   const targetPressure = targetGas.pressure;
   const targetO2Fraction = targetGas.o2 / 100;
   const targetHeFraction = targetGas.he / 100;
   const targetN2Fraction = 1 - targetO2Fraction - targetHeFraction;
 
-  // Calculate target partial pressures
-  const targetO2PP = targetO2Fraction * targetPressure;
-  const targetHePP = targetHeFraction * targetPressure;
-  const targetN2PP = targetN2Fraction * targetPressure;
+  const targetMEP =
+    targetPressure / gasZ(targetO2Fraction, targetHeFraction, targetPressure);
+  const targetO2MEP = targetO2Fraction * targetMEP;
+  const targetHeMEP = targetHeFraction * targetMEP;
+  const targetN2MEP = targetN2Fraction * targetMEP;
 
-  // Current state represented by partial pressures
+  // Current state — convert gauge partial pressures to MEPs
   let currentPressure = startingGas.pressure;
-  let currentO2PP = (startingGas.o2 / 100) * currentPressure;
-  let currentHePP = (startingGas.he / 100) * currentPressure;
-  let currentN2PP = Math.max(0, currentPressure - currentO2PP - currentHePP);
+  const startO2Frac = startingGas.o2 / 100;
+  const startHeFrac = startingGas.he / 100;
+  const startMEP =
+    currentPressure <= 0
+      ? 0
+      : currentPressure / gasZ(startO2Frac, startHeFrac, currentPressure);
+  let currentO2MEP = startO2Frac * startMEP;
+  let currentHeMEP = startHeFrac * startMEP;
+  let currentN2MEP = Math.max(0, (1 - startO2Frac - startHeFrac) * startMEP);
 
+  // Delta MEPs (positive = need to add, negative = need to remove)
   let deltaHe = 0;
   let deltaN2 = 0;
   let deltaO2 = 0;
 
+  // Mole fractions from current MEP state
   const getFractions = () => {
-    if (currentPressure <= 0.0001) {
+    const totalMEP = currentO2MEP + currentHeMEP + currentN2MEP;
+    if (totalMEP <= 0.0001) {
       return { o2: 0, he: 0, n2: 0 };
     }
-
-    const o2 = currentO2PP / currentPressure;
-    const he = currentHePP / currentPressure;
-    const n2 = Math.max(0, 1 - o2 - he);
-
-    return { o2, he, n2 };
+    return {
+      o2: currentO2MEP / totalMEP,
+      he: currentHeMEP / totalMEP,
+      n2: Math.max(0, currentN2MEP / totalMEP),
+    };
   };
 
   const updateDeltas = () => {
-    deltaHe = targetHePP - currentHePP;
-    deltaN2 = targetN2PP - currentN2PP;
-    deltaO2 = targetO2PP - currentO2PP;
+    deltaHe = targetHeMEP - currentHeMEP;
+    deltaN2 = targetN2MEP - currentN2MEP;
+    deltaO2 = targetO2MEP - currentO2MEP;
   };
 
   const recordDrain = (toPressure: number, forceComplete = false) => {
@@ -131,12 +152,27 @@ export function calculateBlendingSteps(
     const previousPressure = currentPressure;
     const previousFractions = getFractions();
     const newPressure = forceComplete ? 0 : toPressure;
-    const ratio = previousPressure > 0 ? newPressure / previousPressure : 0;
 
+    // Scale MEPs: composition unchanged, moles reduce as (newMEP / oldMEP)
+    // MEP_total = gauge / Z(composition, gauge), so ratio = (new/Z_new) / (old/Z_old)
+    const Z_before = gasZ(
+      previousFractions.o2,
+      previousFractions.he,
+      previousPressure,
+    );
+    const Z_after =
+      newPressure <= 0
+        ? 1
+        : gasZ(previousFractions.o2, previousFractions.he, newPressure);
+    const mepRatio =
+      previousPressure <= 0
+        ? 0
+        : newPressure / Z_after / (previousPressure / Z_before);
+
+    currentO2MEP *= mepRatio;
+    currentHeMEP *= mepRatio;
+    currentN2MEP *= mepRatio;
     currentPressure = newPressure;
-    currentO2PP *= ratio;
-    currentHePP *= ratio;
-    currentN2PP *= ratio;
 
     const updatedFractions = getFractions();
 
@@ -169,24 +205,23 @@ export function calculateBlendingSteps(
     const previousPressure = currentPressure;
     const previousFractions = getFractions();
 
-    const inertPercent = Math.max(0, 100 - gas.o2 - gas.he);
-    const o2Added = (gas.o2 / 100) * roundedAmount;
-    const heAdded = (gas.he / 100) * roundedAmount;
-    const n2Added = (inertPercent / 100) * roundedAmount;
+    // Real gas correction: convert gauge bar added → mole-equivalent pressure
+    const newPressure = currentPressure + roundedAmount;
+    const Z_gas = gasZ(gas.o2 / 100, gas.he / 100, newPressure);
+    const deltaMEP = roundedAmount / Z_gas;
 
-    currentO2PP += o2Added;
-    currentHePP += heAdded;
-    currentN2PP += n2Added;
-    currentPressure += roundedAmount;
-
-    currentN2PP = Math.max(0, currentN2PP);
+    const inertFrac = Math.max(0, (100 - gas.o2 - gas.he) / 100);
+    currentO2MEP += (gas.o2 / 100) * deltaMEP;
+    currentHeMEP += (gas.he / 100) * deltaMEP;
+    currentN2MEP += inertFrac * deltaMEP;
+    currentN2MEP = Math.max(0, currentN2MEP);
+    currentPressure = newPressure;
 
     const updatedFractions = getFractions();
 
-    // Calculate volume in liters (pressure × volume)
-    const addedVolume = roundTo(roundedAmount * startingGas.volume, 1);
+    // Free litres consumed = MEP added × tank volume (real gas corrected)
+    const addedVolume = roundTo(deltaMEP * startingGas.volume, 1);
 
-    // Track gas usage
     if (!gasUsage[gas.name]) {
       gasUsage[gas.name] = 0;
     }
@@ -208,9 +243,10 @@ export function calculateBlendingSteps(
 
   updateDeltas();
 
-  // STEP 0: Check if we need to drain and calculate drain pressure
+  // STEP 0: Check if we need to drain and calculate drain MEP
   let needsDrain = false;
-  let drainToPressure = currentPressure;
+  const currentTotalMEP = currentO2MEP + currentHeMEP + currentN2MEP;
+  let drainToMEP = currentTotalMEP; // default: no drain
   const fractions = getFractions();
 
   // Get available gases
@@ -220,19 +256,18 @@ export function calculateBlendingSteps(
     .filter((g) => g.he < 5 && g.o2 >= 19 && g.o2 <= 40)
     .sort((a, b) => a.o2 - b.o2);
 
-  // Check if we have too much of any component (need to remove gas)
+  // Check if any component is in excess — compute max MEP we can keep
   if (deltaHe < -0.5 || deltaN2 < -0.5 || deltaO2 < -0.5) {
     needsDrain = true;
 
-    // Calculate maximum pressure we can keep for each component
     if (deltaHe < -0.5 && fractions.he > 0.001) {
-      drainToPressure = Math.min(drainToPressure, targetHePP / fractions.he);
+      drainToMEP = Math.min(drainToMEP, targetHeMEP / fractions.he);
     }
     if (deltaO2 < -0.5 && fractions.o2 > 0.001) {
-      drainToPressure = Math.min(drainToPressure, targetO2PP / fractions.o2);
+      drainToMEP = Math.min(drainToMEP, targetO2MEP / fractions.o2);
     }
     if (deltaN2 < -0.5 && fractions.n2 > 0.001) {
-      drainToPressure = Math.min(drainToPressure, targetN2PP / fractions.n2);
+      drainToMEP = Math.min(drainToMEP, targetN2MEP / fractions.n2);
     }
   }
 
@@ -241,8 +276,9 @@ export function calculateBlendingSteps(
     .filter((g) => g.he > 30)
     .sort((a, b) => b.he - a.he);
 
-  // Calculate drain pressure for helium blending scenarios
-  // Sequence: Drain → Add He → Top with Air/O2
+  // Calculate drain MEP for helium blending scenarios.
+  // Sequence: Drain → Add He → Top with Air/O2.
+  // All formulas are in MEP space (same algebra as PP, different units).
   const heGasForCalc = pureHe || trimixGases[0];
 
   if (deltaHe > 0.5 && heGasForCalc && airGases.length > 0) {
@@ -253,142 +289,120 @@ export function calculateBlendingSteps(
     const airO2Frac = airGas.o2 / 100;
     const airN2Frac = (100 - airGas.o2 - airGas.he) / 100;
 
-    let calculatedDrainPressure: number | undefined;
+    let calculatedDrainMEP: number | undefined;
 
     if (pureO2) {
-      // Two-gas topping (O2 + Air) for precise control
-      // For trimix He sources (not pure He), we need to account for O2 and N2 in the He gas
-      // Solve for P_drain where after adding He gas, then topping with O2+Air, we hit target
+      // Two-gas topping (O2 + Air): solve for drain MEP such that after adding
+      // He gas and topping with O2 + Air we hit the target MEPs.
 
       if (pureHe) {
-        // Pure helium case: original formula
+        // Pure helium case
         const coeff =
           fractions.o2 -
           1 +
           fractions.he -
           (fractions.n2 * (airO2Frac - 1)) / airN2Frac;
         const rhs =
-          targetO2PP -
-          targetPressure +
-          targetHePP -
-          (targetN2PP * (airO2Frac - 1)) / airN2Frac;
+          targetO2MEP -
+          targetMEP +
+          targetHeMEP -
+          (targetN2MEP * (airO2Frac - 1)) / airN2Frac;
 
         if (Math.abs(coeff) > 0.0001) {
-          calculatedDrainPressure = rhs / coeff;
+          calculatedDrainMEP = rhs / coeff;
         } else {
           // Fallback to air-only formula
           const denominator = fractions.o2 - (1 - fractions.he) * airO2Frac;
           if (Math.abs(denominator) > 0.0001) {
-            calculatedDrainPressure =
-              (targetO2PP -
-                targetPressure * airO2Frac +
-                targetHePP * airO2Frac) /
+            calculatedDrainMEP =
+              (targetO2MEP - targetMEP * airO2Frac + targetHeMEP * airO2Frac) /
               denominator;
           }
         }
       } else {
-        // Trimix He source: need to account for O2 and N2 in the He gas
-        // Strategy: Use O2 for final topping to avoid adding more N2
-        // After drain and adding He gas, top with pure O2 to reach target
-        //
-        // Solve using nitrogen balance equation:
-        // P_drain * frac.n2 + heToAdd * heGasN2Frac = targetN2PP
-        // where: heToAdd = (targetHePP - P_drain * frac.he) / heGasHeFrac
-        //
-        // Substituting and solving for P_drain:
+        // Trimix He source: solve using nitrogen MEP balance.
+        // drain_MEP * frac.n2 + heToAdd * heGasN2Frac = targetN2MEP
+        // where heToAdd = (targetHeMEP - drain_MEP * frac.he) / heGasHeFrac
         const coeff = fractions.n2 - (fractions.he * heGasN2Frac) / heGasHeFrac;
-        const rhs = targetN2PP - (targetHePP * heGasN2Frac) / heGasHeFrac;
+        const rhs = targetN2MEP - (targetHeMEP * heGasN2Frac) / heGasHeFrac;
 
         if (Math.abs(coeff) > 0.0001) {
-          calculatedDrainPressure = rhs / coeff;
+          calculatedDrainMEP = rhs / coeff;
         }
       }
     } else {
       // Single-gas topping (Nitrox/Air only, no pure O2)
-      // After drain and He addition, top with nitrox/air to reach target pressure
 
       if (pureHe) {
         // Pure helium + air/nitrox topping
-        // Solve: P_drain * fractions.o2 + air_amount * airO2Frac = targetO2PP
         const denominator = fractions.o2 - (1 - fractions.he) * airO2Frac;
-
         if (Math.abs(denominator) > 0.0001) {
-          calculatedDrainPressure =
-            (targetO2PP - targetPressure * airO2Frac + targetHePP * airO2Frac) /
+          calculatedDrainMEP =
+            (targetO2MEP - targetMEP * airO2Frac + targetHeMEP * airO2Frac) /
             denominator;
         }
       } else {
-        // Trimix He source + nitrox/air topping
-        // Need to account for O2 and N2 in the trimix helium gas
-        // Strategy: Use two-gas blend (trimix He + nitrox/air) to hit target
-        //
-        // After drain, we add trimix He gas and nitrox/air to reach target
-        // He balance: P_drain * frac.he + heToAdd * heGasHeFrac = targetHePP
-        // O2 balance: P_drain * frac.o2 + heToAdd * heGasO2Frac + airToAdd * airO2Frac = targetO2PP
-        // N2 balance: P_drain * frac.n2 + heToAdd * heGasN2Frac + airToAdd * airN2Frac = targetN2PP
-        // Pressure: P_drain + heToAdd + airToAdd = targetPressure
-        //
-        // From He balance: heToAdd = (targetHePP - P_drain * frac.he) / heGasHeFrac
-        // From Pressure: airToAdd = targetPressure - P_drain - heToAdd
-        //
-        // Substitute into O2 balance and solve for P_drain:
+        // Trimix He source + nitrox/air topping.
+        // He balance:  drain_MEP*frac.he + heToAdd*heGasHeFrac = targetHeMEP
+        // O2 balance:  drain_MEP*frac.o2 + heToAdd*heGasO2Frac + airToAdd*airO2Frac = targetO2MEP
+        // N2 balance:  drain_MEP*frac.n2 + heToAdd*heGasN2Frac + airToAdd*airN2Frac = targetN2MEP
+        // MEP total:   drain_MEP + heToAdd + airToAdd = targetMEP
         const heGasO2Frac = heGasForCalc.o2 / 100;
 
-        // heToAdd = (targetHePP - P_drain * frac.he) / heGasHeFrac
-        // airToAdd = targetPressure - P_drain - (targetHePP - P_drain * frac.he) / heGasHeFrac
-        // airToAdd = targetPressure - P_drain - targetHePP/heGasHeFrac + P_drain * frac.he/heGasHeFrac
-        // airToAdd = targetPressure - targetHePP/heGasHeFrac - P_drain * (1 - frac.he/heGasHeFrac)
-        //
-        // O2 balance:
-        // P_drain * frac.o2 + (targetHePP - P_drain * frac.he)/heGasHeFrac * heGasO2Frac +
-        //   (targetPressure - targetHePP/heGasHeFrac - P_drain * (1 - frac.he/heGasHeFrac)) * airO2Frac = targetO2PP
-        //
-        // Expanding and collecting P_drain terms:
         const coeff =
           fractions.o2 -
           (fractions.he * heGasO2Frac) / heGasHeFrac -
           (1 - fractions.he / heGasHeFrac) * airO2Frac;
         const rhs =
-          targetO2PP -
-          (targetHePP * heGasO2Frac) / heGasHeFrac -
-          (targetPressure - targetHePP / heGasHeFrac) * airO2Frac;
+          targetO2MEP -
+          (targetHeMEP * heGasO2Frac) / heGasHeFrac -
+          (targetMEP - targetHeMEP / heGasHeFrac) * airO2Frac;
 
         if (Math.abs(coeff) > 0.0001) {
-          calculatedDrainPressure = rhs / coeff;
+          calculatedDrainMEP = rhs / coeff;
         }
       }
     }
 
     // Apply drain only if we got a valid calculation AND it makes sense
     if (
-      calculatedDrainPressure !== undefined &&
-      !isNaN(calculatedDrainPressure) &&
-      isFinite(calculatedDrainPressure)
+      calculatedDrainMEP !== undefined &&
+      !isNaN(calculatedDrainMEP) &&
+      isFinite(calculatedDrainMEP)
     ) {
-      // If calculated drain pressure is negative or very small when using trimix He (not pure He)
-      // without pure O2, drain to 0 (empty tank) - this means the mix is incompatible
-      // but can still be blended by starting fresh
-      if (calculatedDrainPressure <= 0.5 && !pureHe && !pureO2) {
+      if (calculatedDrainMEP <= 0.5 && !pureHe && !pureO2) {
         needsDrain = true;
-        drainToPressure = 0;
+        drainToMEP = 0;
       } else if (
-        calculatedDrainPressure > 0.5 &&
-        (calculatedDrainPressure < currentPressure - 0.5 ||
+        calculatedDrainMEP > 0.5 &&
+        (calculatedDrainMEP < currentTotalMEP - 0.5 ||
           (currentPressure >= targetPressure - 0.5 && deltaHe > 0.5))
       ) {
         needsDrain = true;
-        drainToPressure = Math.min(drainToPressure, calculatedDrainPressure);
+        drainToMEP = Math.min(drainToMEP, calculatedDrainMEP);
       }
+    } else if (calculatedDrainMEP === undefined) {
+      // Drain formula was degenerate (e.g. starting gas O2% equals topping
+      // gas O2%, so the residual cannot be corrected by the topping gas).
+      // Must drain to zero so the target composition can be achieved.
+      needsDrain = true;
+      drainToMEP = 0;
     }
   }
 
-  // Execute the drain
+  // Execute the drain — convert drain MEP back to gauge pressure
   if (needsDrain) {
-    const targetDrainPressure = roundTo(Math.max(0, drainToPressure), 2);
-    const drainedAmount = currentPressure - targetDrainPressure;
+    const drainFracs = getFractions();
+    const drainToGauge = roundTo(
+      drainToMEP <= 0
+        ? 0
+        : mepToGauge(drainToMEP, drainFracs.o2, drainFracs.he),
+      1,
+    );
+    const drainedAmount = currentPressure - drainToGauge;
 
-    if (drainedAmount > 0.5 && targetDrainPressure > 0.5) {
-      recordDrain(targetDrainPressure);
+    if (drainedAmount > 0.5 && drainToGauge > 0.5) {
+      recordDrain(drainToGauge);
     } else if (drainedAmount > 0.5) {
       recordDrain(0, true);
     }
@@ -400,8 +414,28 @@ export function calculateBlendingSteps(
 
     if (heGas && heGas.he > 0) {
       const heFraction = heGas.he / 100;
-      const heToAdd = deltaHe / heFraction;
-      recordGasAddition(heGas, heToAdd, `Add ${heGas.name}`, 2);
+      // deltaHe is MEP; find the gauge bar addition that yields exactly
+      // deltaHe/heFraction MEP of He source gas.  Use the mixture Z at the
+      // new composition so the gauge amount is accurate even for large He
+      // additions into O₂/N₂-rich mixtures (Z_mix ≠ Z_heGas).
+      const heMEPtoAdd = deltaHe / heFraction;
+      const totalMEP_old = currentO2MEP + currentHeMEP + currentN2MEP;
+      const totalMEP_target = totalMEP_old + heMEPtoAdd;
+      const tO2 =
+        (currentO2MEP + (heGas.o2 / 100) * heMEPtoAdd) / totalMEP_target;
+      const tHe = (currentHeMEP + heFraction * heMEPtoAdd) / totalMEP_target;
+      // Solve P = Z_mix(composition, P) × totalMEP_target iteratively
+      let P_he = currentPressure + heMEPtoAdd; // initial estimate
+      for (let i = 0; i < 6; i++) {
+        const next = gasZ(tO2, tHe, P_he) * totalMEP_target;
+        if (Math.abs(next - P_he) < 0.001) {
+          P_he = next;
+          break;
+        }
+        P_he = next;
+      }
+      const heGaugeToAdd = P_he - currentPressure;
+      recordGasAddition(heGas, heGaugeToAdd, `Add ${heGas.name}`);
     }
   }
 
@@ -410,25 +444,29 @@ export function calculateBlendingSteps(
 
   if (remainingPressure > 0.1) {
     if (pureO2 && airGases.length === 0) {
+      // Only O2 available
       const o2ToAdd = roundTo(remainingPressure, 1);
-
       if (o2ToAdd > 0.1) {
         recordGasAddition(pureO2, o2ToAdd, `Add ${pureO2.name}`);
       }
     } else if (airGases.length > 0) {
+      // Select best air/nitrox gas: find which single gas gets closest to target
       let bestAirGas = airGases[0];
       let bestDiff = Infinity;
 
       for (const airGas of airGases) {
-        const testO2PP = currentO2PP + (airGas.o2 / 100) * remainingPressure;
-        const testHePP = currentHePP + (airGas.he / 100) * remainingPressure;
-
-        const testO2Fraction = testO2PP / targetPressure;
-        const testHeFraction = testHePP / targetPressure;
+        const Z_gas = gasZ(airGas.o2 / 100, airGas.he / 100, targetPressure);
+        const addedMEP = remainingPressure / Z_gas;
+        const totalMEPtest =
+          currentO2MEP + currentHeMEP + currentN2MEP + addedMEP;
+        const testO2Frac =
+          (currentO2MEP + (airGas.o2 / 100) * addedMEP) / totalMEPtest;
+        const testHeFrac =
+          (currentHeMEP + (airGas.he / 100) * addedMEP) / totalMEPtest;
 
         const diff =
-          Math.abs(testO2Fraction * 100 - targetGas.o2) +
-          Math.abs(testHeFraction * 100 - targetGas.he);
+          Math.abs(testO2Frac * 100 - targetGas.o2) +
+          Math.abs(testHeFrac * 100 - targetGas.he);
 
         if (diff < bestDiff) {
           bestDiff = diff;
@@ -436,9 +474,8 @@ export function calculateBlendingSteps(
         }
       }
 
-      // When we have pure O2 available and the best gas doesn't get us very close,
-      // prefer the LOWEST O2 gas (typically Air) because the two-gas blending
-      // algorithm can achieve better precision
+      // When pure O2 is available and best single gas isn't close enough,
+      // prefer the lowest-O2 gas so the two-gas algorithm can compensate.
       if (pureO2 && bestDiff > 0.7) {
         bestAirGas = airGases.reduce((lowest, current) =>
           current.o2 < lowest.o2 ? current : lowest,
@@ -447,92 +484,107 @@ export function calculateBlendingSteps(
 
       // Two-gas blending for precise O2 control
       if (pureO2 && bestAirGas && Math.abs(bestAirGas.o2 - pureO2.o2) > 10) {
-        // Solve for air and O2 amounts to hit exact target O2 and N2
-        const neededO2PP = targetO2PP - currentO2PP;
-        const neededN2PP = targetN2PP - currentN2PP;
+        // Solve directly in gauge space for the O2/Air split that hits the
+        // target O2 mole fraction. Air goes in last (to targetPressure) so
+        // Z_Air is evaluated at the known final pressure — no approximation.
+        // O2 goes in first; Z_O2 depends on the answer, so iterate 2–3 times.
+        const Z_Air = gasZ(
+          bestAirGas.o2 / 100,
+          bestAirGas.he / 100,
+          targetPressure,
+        );
+        const q = bestAirGas.o2 / 100; // Air O2 mole fraction
+        const f = targetO2Fraction; // target O2 mole fraction
+        const T0 = currentO2MEP + currentHeMEP + currentN2MEP;
 
-        const o2GasFraction = pureO2.o2 / 100;
-        const airGasFraction = bestAirGas.o2 / 100;
-        const airN2GasFraction = (100 - bestAirGas.o2 - bestAirGas.he) / 100;
-
-        let airPressure: number;
-        let o2Pressure: number;
-
-        // Use N2 equation if we need nitrogen, otherwise use O2 equation
-        if (neededN2PP > 0.1 && airN2GasFraction > 0.01) {
-          airPressure = neededN2PP / airN2GasFraction;
-          o2Pressure = remainingPressure - airPressure;
-        } else {
-          // Solve: neededO2PP = o2Frac * o2Pressure + airFrac * airPressure
-          // where: o2Pressure + airPressure = remainingPressure
-          if (Math.abs(airGasFraction - o2GasFraction) > 0.01) {
-            airPressure =
-              (neededO2PP - o2GasFraction * remainingPressure) /
-              (airGasFraction - o2GasFraction);
-            o2Pressure = remainingPressure - airPressure;
-          } else {
-            // Gases too similar, just use air
-            airPressure = remainingPressure;
-            o2Pressure = 0;
-          }
+        let Z_O2 = gasZ(pureO2.o2 / 100, pureO2.he / 100, targetPressure);
+        let o2Pressure = 0;
+        for (let i = 0; i < 3; i++) {
+          const denom = (1 - f) / Z_O2 - (q - f) / Z_Air;
+          if (Math.abs(denom) < 0.0001) break;
+          const numer =
+            f * T0 - currentO2MEP - (remainingPressure * (q - f)) / Z_Air;
+          const candidate = numer / denom;
+          Z_O2 = gasZ(
+            pureO2.o2 / 100,
+            pureO2.he / 100,
+            currentPressure + Math.max(0, candidate),
+          );
+          o2Pressure = candidate;
         }
 
-        // Clamp to valid ranges
-        airPressure = Math.max(0, Math.min(remainingPressure, airPressure));
-        o2Pressure = Math.max(0, Math.min(remainingPressure, o2Pressure));
+        // Air fills the remainder; round O2 first so Air absorbs rounding error.
+        // Cap O2 at remainingPressure: rounding/approximation can push o2Pressure
+        // slightly above remainingPressure, which would overshoot targetPressure.
+        const o2Rounded = Math.max(
+          0,
+          Math.min(
+            remainingPressure,
+            Math.round(Math.max(0, o2Pressure) * 10) / 10,
+          ),
+        );
+        const airRounded = Math.max(
+          0,
+          Math.round((remainingPressure - o2Rounded) * 10) / 10,
+        );
 
-        // Normalize to sum to remainingPressure
-        const total = airPressure + o2Pressure;
-        if (total > 0.1) {
-          airPressure = (airPressure / total) * remainingPressure;
-          o2Pressure = (o2Pressure / total) * remainingPressure;
+        if (o2Rounded > 0.1) {
+          recordGasAddition(pureO2, o2Rounded, `Add ${pureO2.name}`);
         }
-
-        // Round to 0.1 bar precision
-        o2Pressure = Math.round(o2Pressure * 10) / 10;
-        airPressure = Math.round(airPressure * 10) / 10;
-
-        // Add O2 first if needed
-        if (o2Pressure > 0.1) {
-          recordGasAddition(pureO2, o2Pressure, `Add ${pureO2.name}`);
-        }
-
-        // Then add air/nitrox
-        if (airPressure > 0.1) {
+        if (airRounded > 0.1) {
           recordGasAddition(
             bestAirGas,
-            airPressure,
+            airRounded,
             `Top up with ${bestAirGas.name}`,
           );
         }
       } else {
-        // Single-gas topping: add O2 first, then air to reach target pressure
-        const o2FromAir = (bestAirGas.o2 / 100) * remainingPressure;
-        const projectedO2PP = currentO2PP + o2FromAir;
-        deltaO2 = targetO2PP - projectedO2PP;
-
-        // Add O2 if needed after accounting for O2 in air
-        if (deltaO2 > 0.1 && pureO2) {
-          recordGasAddition(pureO2, roundTo(deltaO2, 1), `Add ${pureO2.name}`);
+        // Single-gas topping: add pure O2 boost (if needed and available),
+        // then fill the rest with bestAirGas.
+        if (pureO2 && bestAirGas) {
+          const Z_Air = gasZ(
+            bestAirGas.o2 / 100,
+            bestAirGas.he / 100,
+            targetPressure,
+          );
+          const q = bestAirGas.o2 / 100;
+          const f = targetO2Fraction;
+          const T0 = currentO2MEP + currentHeMEP + currentN2MEP;
+          const Z_O2 = gasZ(pureO2.o2 / 100, pureO2.he / 100, targetPressure);
+          const denom = (1 - f) / Z_O2 - (q - f) / Z_Air;
+          if (Math.abs(denom) > 0.0001) {
+            const numer =
+              f * T0 - currentO2MEP - (remainingPressure * (q - f)) / Z_Air;
+            const extraO2Gauge = roundTo(Math.max(0, numer / denom), 1);
+            if (extraO2Gauge > 0.1) {
+              recordGasAddition(pureO2, extraO2Gauge, `Add ${pureO2.name}`);
+            }
+          }
         }
 
-        // Top up with air to reach target pressure
+        // Top up with air/nitrox to reach target pressure
         const finalRemainingPressure = roundTo(
           targetPressure - currentPressure,
           1,
         );
-        if (finalRemainingPressure > 0.1) {
+        if (finalRemainingPressure > 0.1 && bestAirGas) {
           recordGasAddition(
             bestAirGas,
             finalRemainingPressure,
             `Top up with ${bestAirGas.name}`,
+          );
+        } else if (finalRemainingPressure > 0.1 && pureO2) {
+          recordGasAddition(
+            pureO2,
+            finalRemainingPressure,
+            `Add ${pureO2.name}`,
           );
         }
       }
     }
   }
 
-  // Calculate final mix
+  // Calculate final mix from mole fractions
   const finalFractions = getFractions();
   const finalMix = {
     o2: toPercentLabel(finalFractions.o2),
@@ -540,7 +592,6 @@ export function calculateBlendingSteps(
     pressure: roundTo(currentPressure, 1),
   };
 
-  // Check if we're close enough to target (lenient tolerance for rounding errors)
   const o2Error = Math.abs(finalMix.o2 - targetGas.o2);
   const heError = Math.abs(finalMix.he - targetGas.he);
   const pressureError = Math.abs(finalMix.pressure - targetGas.pressure);

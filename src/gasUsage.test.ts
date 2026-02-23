@@ -43,14 +43,16 @@ describe("Gas Usage Tracking", () => {
       }
     });
 
-    // Total gas used should equal tank volume × target pressure
+    // Total gas used (real free litres) ≥ volume × pressure because real gases
+    // are more compressed than ideal (Z < 1 for O₂/N₂ at high pressure).
     const totalUsed = Object.values(result.gasUsage).reduce(
       (sum, val) => sum + val,
       0,
     );
-    const expected = startingGas.volume * targetGas.pressure;
+    const idealEstimate = startingGas.volume * targetGas.pressure;
 
-    expect(totalUsed).toBeCloseTo(expected, 0);
+    expect(totalUsed).toBeGreaterThan(idealEstimate * 0.99);
+    expect(totalUsed).toBeLessThan(idealEstimate * 1.1);
 
     // Should have used Helium, O2, and Air
     expect(Object.keys(result.gasUsage).length).toBeGreaterThan(0);
@@ -59,7 +61,9 @@ describe("Gas Usage Tracking", () => {
     Object.entries(result.gasUsage).forEach(([gas, liters]) => {
       console.log(`${gas}: ${liters.toFixed(1)} L`);
     });
-    console.log(`Total: ${totalUsed.toFixed(1)} L (expected ${expected} L)`);
+    console.log(
+      `Total: ${totalUsed.toFixed(1)} L (ideal estimate ${idealEstimate} L)`,
+    );
   });
 
   it("should track gas usage for air top-up", () => {
@@ -85,14 +89,16 @@ describe("Gas Usage Tracking", () => {
     expect(result.success).toBe(true);
     expect(result.gasUsage["Air"]).toBeDefined();
 
-    // Should have used 150 bar × 12L = 1800L of air
+    // With real gas (Z < 1 for air at 200 bar), more free litres are delivered
+    // per bar than ideal. Expect slightly more than the ideal 1800 L.
     const pressureDiff = targetGas.pressure - startingGas.pressure;
-    const expectedAir = pressureDiff * startingGas.volume;
+    const idealAir = pressureDiff * startingGas.volume;
 
-    expect(result.gasUsage["Air"]).toBeCloseTo(expectedAir, 0);
+    expect(result.gasUsage["Air"]).toBeGreaterThan(idealAir * 0.99);
+    expect(result.gasUsage["Air"]).toBeLessThan(idealAir * 1.1);
 
     console.log(
-      `\nAir used: ${result.gasUsage["Air"].toFixed(1)} L (expected ${expectedAir} L)`,
+      `\nAir used: ${result.gasUsage["Air"].toFixed(1)} L (ideal estimate ${idealAir} L)`,
     );
   });
 
@@ -127,9 +133,11 @@ describe("Gas Usage Tracking", () => {
       expect(step.addedVolume).toBeDefined();
       expect(step.addedVolume).toBeGreaterThan(0);
 
-      // Verify volume calculation: addedVolume = addedPressure × tank volume
-      const expectedVolume = step.addedPressure! * startingGas.volume;
-      expect(step.addedVolume).toBeCloseTo(expectedVolume, 0);
+      // With real gas, addedVolume = (addedPressure / Z) × tank volume,
+      // which is ≥ addedPressure × tank volume (Z ≤ 1 for O₂/N₂ at pressure).
+      const idealVolume = step.addedPressure! * startingGas.volume;
+      expect(step.addedVolume).toBeGreaterThan(idealVolume * 0.99);
+      expect(step.addedVolume).toBeLessThan(idealVolume * 1.1);
 
       console.log(
         `Step: ${step.action} - ${step.addedPressure} bar × ${startingGas.volume}L = ${step.addedVolume}L`,

@@ -17,7 +17,7 @@ Calculates the step-by-step procedure to blend nitrox and trimix gases using par
 - Gas usage summary (litres per gas type consumed)
 - URL-shareable configurations
 
-The algorithm works entirely in partial-pressure space (ideal gas law). Blending steps always follow the order: drain if needed → add helium → top up with O₂ and/or air. Tolerances are ±0.5% O₂, ±0.5% He, ±1 bar.
+The algorithm follows real gas laws. Blending steps always follow the order: drain if needed → add helium → top up with O₂ and/or air. Tolerances are ±0.5% O₂, ±0.5% He, ±1 bar.
 
 ### Tank Calculator
 
