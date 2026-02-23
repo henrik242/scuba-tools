@@ -515,7 +515,7 @@ function GasBlender() {
             })}
           </div>
           {gasError && <div className="error">{gasError}</div>}
-          <button onClick={addCustomGas} className="add-gas-btn">
+          <button onClick={addCustomGas} className="empty-btn">
             + Add Custom Gas
           </button>
         </div>
@@ -523,9 +523,7 @@ function GasBlender() {
         {blendingSteps && (
           <div className="card results">
             <h2>Blending Steps</h2>
-            {!blendingSteps.success ? (
-              <p className="error">{blendingSteps.error}</p>
-            ) : blendingSteps.steps.length === 0 ? (
+            {blendingSteps.steps.length === 0 ? (
               <p className="no-steps">
                 No blending needed - tank is already at target mix!
               </p>
@@ -569,7 +567,9 @@ function GasBlender() {
               </div>
             )}
 
-            <div className="final-result">
+            <div
+              className={`final-result${blendingSteps.success ? "" : " failure"}`}
+            >
               <h3>Final Result</h3>
               <div className="final-mix">
                 <div className="final-detail">
@@ -585,14 +585,10 @@ function GasBlender() {
                   </span>
                 </div>
               </div>
-              {Math.abs(blendingSteps.finalMix.o2 - targetO2) > 0.5 ||
-              Math.abs(blendingSteps.finalMix.he - targetHe) > 0.5 ? (
-                <div className="warning">
-                  ⚠️ Final mix differs from target. Adjust available gases or
-                  starting conditions.
-                </div>
-              ) : (
+              {blendingSteps.success ? (
                 <div className="success">✓ Target mix achieved!</div>
+              ) : (
+                <p className="final-error">{blendingSteps.error}</p>
               )}
               {blendingSteps.success &&
                 Object.keys(blendingSteps.gasUsage).length > 0 && (

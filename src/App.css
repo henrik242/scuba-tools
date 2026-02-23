@@ -1,7 +1,7 @@
 /* ==================== CSS Variables ==================== */
 :root {
-  --primary: #667eea;
-  --primary-dark: #764ba2;
+  --primary: #22b5cc;
+  --primary-dark: #0e8fa6;
   --success: #28a745;
   --danger: #dc3545;
   --gray-100: #f8f9fa;
@@ -95,7 +95,7 @@ h1 {
 }
 
 .nav-btn:hover {
-  background: #f0f0ff;
+  background: #e6f7fa;
   transform: translateY(-2px);
   box-shadow: var(--shadow-lg);
 }
@@ -200,18 +200,6 @@ h1 {
   transform: translateY(0);
 }
 
-.add-gas-btn {
-  background: var(--success);
-  color: var(--white);
-  font-size: 0.95rem;
-  padding: 0.75rem;
-  border-radius: var(--border-radius);
-}
-
-.add-gas-btn:hover {
-  background: var(--success-dark);
-}
-
 .empty-btn,
 .toggle-calc-btn {
   padding: 0.5rem 1rem;
@@ -247,7 +235,7 @@ h1 {
 }
 
 .toggle-calc-btn:hover {
-  background: #f0f0ff;
+  background: #e6f7fa;
 }
 
 .remove-gas-btn {
@@ -414,8 +402,8 @@ h1 {
 }
 
 .success {
-  background: rgba(40, 167, 69, 0.2);
-  border: 2px solid rgba(40, 167, 69, 0.5);
+  background: var(--success);
+  border: 2px solid var(--success);
   color: var(--white);
 }
 
@@ -505,6 +493,34 @@ h1 {
   padding: 1.5rem;
   border-radius: var(--border-radius-lg);
   margin-top: 1rem;
+}
+
+.final-result.failure {
+  background: #fff0f0;
+  border: 2px solid #e05252;
+  color: #333;
+}
+
+.final-result.failure .gas-usage-summary {
+  border-top: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+.final-result.failure .gas-usage-item {
+  background: rgba(0, 0, 0, 0.05);
+  color: #333;
+}
+
+.final-result.failure .final-error {
+  color: #c0392b;
+}
+
+.final-error {
+  text-align: center;
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--white);
+  opacity: 0.95;
+  margin: 0;
 }
 
 .final-result h3 {
@@ -617,7 +633,7 @@ h1 {
 }
 
 .unit-switch-btn:hover {
-  background: #f0f0ff;
+  background: #e6f7fa;
 }
 
 .unit-switch-btn.active {
@@ -685,14 +701,14 @@ h1 {
   margin-top: 1.5rem;
   padding: 1.5rem;
   border-radius: 14px;
-  background: linear-gradient(135deg, #edf2ff 0%, #f4f0ff 100%);
-  border: 1px solid #d7dff7;
+  background: linear-gradient(135deg, #e8f7fa 0%, #eaf5f0 100%);
+  border: 1px solid #b3d9e0;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
 }
 
 .buoyancy-card h3 {
   margin: 0 0 1rem 0;
-  color: #38447c;
+  color: #0c6878;
   text-transform: uppercase;
   font-size: 0.9rem;
   letter-spacing: 0.08em;
@@ -711,8 +727,8 @@ h1 {
   background: rgba(255, 255, 255, 0.95);
   border-radius: 12px;
   padding: 1rem 1.25rem;
-  border: 1px solid rgba(221, 228, 255, 0.9);
-  box-shadow: 0 6px 16px rgba(56, 71, 124, 0.12);
+  border: 1px solid rgba(179, 217, 224, 0.9);
+  box-shadow: 0 6px 16px rgba(12, 104, 120, 0.12);
   backdrop-filter: blur(4px);
 }
 
@@ -725,7 +741,7 @@ h1 {
 .buoyancy-label {
   font-weight: 700;
   font-size: 1.1rem;
-  color: #38447c;
+  color: #0c6878;
 }
 
 .buoyancy-value {
@@ -736,7 +752,7 @@ h1 {
 
 .buoyancy-subtext {
   font-size: 0.85rem;
-  color: #5c6689;
+  color: #3a7a8a;
 }
 
 .tank-illustration {

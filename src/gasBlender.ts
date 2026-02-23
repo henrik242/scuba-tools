@@ -132,7 +132,10 @@ function calcDrainMEP_pureHe_airOnly(
   const { fractions, targetO2MEP, targetHeMEP, targetMEP } = ctx;
   const denominator = fractions.o2 - (1 - fractions.he) * airO2Frac;
   if (Math.abs(denominator) < NEAR_ZERO) return undefined;
-  return (targetO2MEP - targetMEP * airO2Frac + targetHeMEP * airO2Frac) / denominator;
+  return (
+    (targetO2MEP - targetMEP * airO2Frac + targetHeMEP * airO2Frac) /
+    denominator
+  );
 }
 
 /**
@@ -215,7 +218,8 @@ function solveO2Pressure(
   for (let i = 0; i < 3; i++) {
     const denom = (1 - f) / Z_O2 - (q - f) / Z_topup;
     if (Math.abs(denom) < NEAR_ZERO) break;
-    const numer = f * T0 - currentO2MEP - (remainingPressure * (q - f)) / Z_topup;
+    const numer =
+      f * T0 - currentO2MEP - (remainingPressure * (q - f)) / Z_topup;
     const candidate = numer / denom;
     Z_O2 = gasZ(
       pureO2.o2 / 100,
@@ -415,7 +419,11 @@ export function calculateBlendingSteps(
     .sort((a, b) => a.o2 - b.o2);
 
   // Check if any component is in excess — compute max MEP we can keep
-  if (deltaHe < -MIN_MEP_DELTA || deltaN2 < -MIN_MEP_DELTA || deltaO2 < -MIN_MEP_DELTA) {
+  if (
+    deltaHe < -MIN_MEP_DELTA ||
+    deltaN2 < -MIN_MEP_DELTA ||
+    deltaO2 < -MIN_MEP_DELTA
+  ) {
     needsDrain = true;
 
     if (deltaHe < -MIN_MEP_DELTA && fractions.he > 0.001) {
@@ -478,7 +486,8 @@ export function calculateBlendingSteps(
       } else if (
         drainMEP > MIN_MEP_DELTA &&
         (drainMEP < currentTotalMEP - MIN_MEP_DELTA ||
-          (currentPressure >= targetPressure - MIN_MEP_DELTA && deltaHe > MIN_MEP_DELTA))
+          (currentPressure >= targetPressure - MIN_MEP_DELTA &&
+            deltaHe > MIN_MEP_DELTA))
       ) {
         needsDrain = true;
         drainToMEP = Math.min(drainToMEP, drainMEP);
@@ -557,7 +566,11 @@ export function calculateBlendingSteps(
       let bestDiff = Infinity;
 
       for (const topupGas of topupGases) {
-        const Z_gas = gasZ(topupGas.o2 / 100, topupGas.he / 100, targetPressure);
+        const Z_gas = gasZ(
+          topupGas.o2 / 100,
+          topupGas.he / 100,
+          targetPressure,
+        );
         const addedMEP = remainingPressure / Z_gas;
         const totalMEPtest =
           currentO2MEP + currentHeMEP + currentN2MEP + addedMEP;
@@ -625,7 +638,10 @@ export function calculateBlendingSteps(
         }
       } else {
         // Single-gas topping: fill to target pressure with bestTopupGas
-        const finalRemainingPressure = roundTo(targetPressure - currentPressure, 1);
+        const finalRemainingPressure = roundTo(
+          targetPressure - currentPressure,
+          1,
+        );
         if (finalRemainingPressure > MIN_ADDITION_BAR) {
           recordGasAddition(
             bestTopupGas,
