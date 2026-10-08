@@ -72,11 +72,12 @@ Do not reorder these steps without updating the drain calculation formulas.
 
 ### Drain calculation
 
-The drain target is solved analytically (not iteratively) from simultaneous partial-pressure balance equations. There are three code paths depending on available gases:
+The drain target is solved analytically (not iteratively) from simultaneous partial-pressure balance equations, in MEP space:
 
-- Pure He + pure O₂ available
-- Trimix He source + pure O₂
-- Trimix He source + only air/nitrox
+- **Pure O₂ available** (with pure He or a trimix He source): He source + O₂ + topping gas give three fills for three component targets plus the amount kept — one degree of freedom. Each fill is linear in the amount kept and must be non-negative; keep the most those bounds allow, so the tank is only drained when a component would overshoot (`calcDrainMEP_withO2`).
+- **No pure O₂** (pure He or trimix + only air/nitrox): the amount kept is the unique solution.
+
+When no amount kept works, drain completely.
 
 If you modify this section, re-run the full test suite — drain edge cases have many interactions.
 

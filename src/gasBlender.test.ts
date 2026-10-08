@@ -1609,4 +1609,40 @@ describe("Gas Blender - Trimix Calculations", () => {
       expect(drainStep!.toPressure).toBe(0);
     });
   });
+
+  describe("Drain only what overshoots", () => {
+    const basicGases: Gas[] = [
+      { name: "Air", o2: 21, he: 0 },
+      { name: "O2", o2: 100, he: 0 },
+      { name: "Helium", o2: 0, he: 100 },
+    ];
+
+    it("should keep air when O2 can make up the difference", () => {
+      // 100 bar air holds less O2 and N2 than 18/45 at 220 needs, so nothing has to go.
+      const result = calculateBlendingSteps(
+        { volume: 12, o2: 21, he: 0, pressure: 100 },
+        { o2: 18, he: 45, pressure: 220 },
+        basicGases,
+      );
+
+      expect(result.success).toBe(true);
+      expect(result.steps.some((s) => s.action.includes("Drain"))).toBe(false);
+      expect(result.steps.map((s) => s.gas)).toEqual(["Helium", "O2", "Air"]);
+    });
+
+    it("should drain only the excess nitrogen", () => {
+      // 100 bar air holds 79 bar N2; 18/45 at 200 wants about 74, so drain a little, not all.
+      const result = calculateBlendingSteps(
+        { volume: 12, o2: 21, he: 0, pressure: 100 },
+        { o2: 18, he: 45, pressure: 200 },
+        basicGases,
+      );
+
+      expect(result.success).toBe(true);
+      const drainStep = result.steps.find((s) => s.action.includes("Drain"));
+      expect(drainStep).toBeDefined();
+      expect(drainStep!.toPressure).toBeGreaterThanOrEqual(90);
+      expect(drainStep!.toPressure).toBeLessThanOrEqual(99);
+    });
+  });
 });
