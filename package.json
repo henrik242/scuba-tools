@@ -1,6 +1,7 @@
 {
   "name": "scuba-tools",
   "private": true,
+  "license": "GPL-2.0-or-later",
   "version": "0.0.0",
   "type": "module",
   "scripts": {

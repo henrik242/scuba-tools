@@ -43,4 +43,4 @@ The build copies `dist/index.html` to `dist/blender.html` and `dist/tanks.html` 
 
 ## License
 
-Licensed under [GPLv3](LICENSE).
+Licensed under [GPL-2.0-or-later](LICENSE).

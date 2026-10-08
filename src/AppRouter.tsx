@@ -57,12 +57,12 @@ function App() {
           <p className="footer-license">
             Licensed under{" "}
             <a
-              href="https://www.gnu.org/licenses/gpl-3.0.en.html"
+              href="https://www.gnu.org/licenses/old-licenses/gpl-2.0.html"
               target="_blank"
               rel="noopener noreferrer"
               className="footer-link"
             >
-              GPLv3
+              GPL-2.0-or-later
             </a>
           </p>
         </div>
