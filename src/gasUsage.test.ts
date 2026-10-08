@@ -43,16 +43,17 @@ describe("Gas Usage Tracking", () => {
       }
     });
 
-    // Total gas used (real free litres) ≥ volume × pressure because real gases
-    // are more compressed than ideal (Z < 1 for O₂/N₂ at high pressure).
+    // Total gas used (real free litres) < volume × pressure: at filling
+    // pressures He and N2 are stiffer than ideal (Z > 1), so a bar of gauge
+    // holds less gas.
     const totalUsed = Object.values(result.gasUsage).reduce(
       (sum, val) => sum + val,
       0,
     );
     const idealEstimate = startingGas.volume * targetGas.pressure;
 
-    expect(totalUsed).toBeGreaterThan(idealEstimate * 0.99);
-    expect(totalUsed).toBeLessThan(idealEstimate * 1.1);
+    expect(totalUsed).toBeGreaterThan(idealEstimate * 0.9);
+    expect(totalUsed).toBeLessThan(idealEstimate);
 
     // Should have used Helium, O2, and Air
     expect(Object.keys(result.gasUsage).length).toBeGreaterThan(0);
@@ -89,13 +90,13 @@ describe("Gas Usage Tracking", () => {
     expect(result.success).toBe(true);
     expect(result.gasUsage["Air"]).toBeDefined();
 
-    // With real gas (Z < 1 for air at 200 bar), more free litres are delivered
-    // per bar than ideal. Expect slightly more than the ideal 1800 L.
+    // Air is stiffer than ideal at 200 bar (Z about 1.05), so fewer free litres
+    // go in per bar than ideal. Expect somewhat less than the ideal 1800 L.
     const pressureDiff = targetGas.pressure - startingGas.pressure;
     const idealAir = pressureDiff * startingGas.volume;
 
-    expect(result.gasUsage["Air"]).toBeGreaterThan(idealAir * 0.99);
-    expect(result.gasUsage["Air"]).toBeLessThan(idealAir * 1.1);
+    expect(result.gasUsage["Air"]).toBeGreaterThan(idealAir * 0.9);
+    expect(result.gasUsage["Air"]).toBeLessThan(idealAir);
 
     console.log(
       `\nAir used: ${result.gasUsage["Air"].toFixed(1)} L (ideal estimate ${idealAir} L)`,
@@ -133,11 +134,12 @@ describe("Gas Usage Tracking", () => {
       expect(step.addedVolume).toBeDefined();
       expect(step.addedVolume).toBeGreaterThan(0);
 
-      // With real gas, addedVolume = (addedPressure / Z) × tank volume,
-      // which is ≥ addedPressure × tank volume (Z ≤ 1 for O₂/N₂ at pressure).
+      // With real gas the litres per bar follow the mix's Z: He and air
+      // additions give less than addedPressure × volume (Z > 1), O2 about the
+      // same.
       const idealVolume = step.addedPressure! * startingGas.volume;
-      expect(step.addedVolume).toBeGreaterThan(idealVolume * 0.99);
-      expect(step.addedVolume).toBeLessThan(idealVolume * 1.1);
+      expect(step.addedVolume).toBeGreaterThan(idealVolume * 0.9);
+      expect(step.addedVolume).toBeLessThan(idealVolume * 1.05);
 
       console.log(
         `Step: ${step.action} - ${step.addedPressure} bar × ${startingGas.volume}L = ${step.addedVolume}L`,

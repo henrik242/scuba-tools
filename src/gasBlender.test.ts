@@ -4,6 +4,7 @@ import {
   TankState,
   TargetGas,
 } from "./gasBlender.ts";
+import { gasZ } from "./realGas.ts";
 
 describe("Gas Blender - Trimix Calculations", () => {
   const standardGases: Gas[] = [
@@ -121,9 +122,10 @@ describe("Gas Blender - Trimix Calculations", () => {
     });
 
     it("should blend air from empty tank", () => {
+      // An empty tank still holds 1 atm, here of air, so air alone fills it.
       const startingGas: TankState = {
         volume: 12,
-        o2: 0,
+        o2: 21,
         he: 0,
         pressure: 0,
       };
@@ -951,9 +953,10 @@ describe("Gas Blender - Trimix Calculations", () => {
           { name: "O2", o2: 100, he: 0, editable: false },
         ];
 
+        // The 1 atm of air left in the empty tank stays in the mix.
         const startingGas: TankState = {
           volume: 7,
-          o2: 0,
+          o2: 21,
           he: 0,
           pressure: 0,
         };
@@ -971,7 +974,8 @@ describe("Gas Blender - Trimix Calculations", () => {
         );
 
         expect(result.success).toBe(true);
-        expect(result.finalMix.o2).toBe(100);
+        expect(result.finalMix.o2).toBeGreaterThanOrEqual(99.5);
+        expect(result.finalMix.o2).toBeLessThan(100);
         expect(result.steps.length).toBe(1);
       });
 
@@ -1618,9 +1622,9 @@ describe("Gas Blender - Trimix Calculations", () => {
     ];
 
     it("should keep air when O2 can make up the difference", () => {
-      // 100 bar air holds less O2 and N2 than 18/45 at 220 needs, so nothing has to go.
+      // 90 bar air holds less O2 and N2 than 18/45 at 220 needs, so nothing has to go.
       const result = calculateBlendingSteps(
-        { volume: 12, o2: 21, he: 0, pressure: 100 },
+        { volume: 12, o2: 21, he: 0, pressure: 90 },
         { o2: 18, he: 45, pressure: 220 },
         basicGases,
       );
@@ -1631,7 +1635,9 @@ describe("Gas Blender - Trimix Calculations", () => {
     });
 
     it("should drain only the excess nitrogen", () => {
-      // 100 bar air holds 79 bar N2; 18/45 at 200 wants about 74, so drain a little, not all.
+      // 100 bar air holds about 80 ideal bar N2; 18/45 at 200 wants about 70 (He
+      // is stiff, so the target holds fewer moles than 200 bar suggests). Drain
+      // a little, not all.
       const result = calculateBlendingSteps(
         { volume: 12, o2: 21, he: 0, pressure: 100 },
         { o2: 18, he: 45, pressure: 200 },
@@ -1641,8 +1647,197 @@ describe("Gas Blender - Trimix Calculations", () => {
       expect(result.success).toBe(true);
       const drainStep = result.steps.find((s) => s.action.includes("Drain"));
       expect(drainStep).toBeDefined();
-      expect(drainStep!.toPressure).toBeGreaterThanOrEqual(90);
-      expect(drainStep!.toPressure).toBeLessThanOrEqual(99);
+      expect(drainStep!.toPressure).toBeGreaterThanOrEqual(85);
+      expect(drainStep!.toPressure).toBeLessThanOrEqual(92);
+    });
+  });
+
+  describe("Real gas model", () => {
+    it("pins pure-gas Z to the fit and to published ranges", () => {
+      // gasZ takes absolute bar.
+      const o2 = (p: number) => gasZ(1, 0, p);
+      const n2 = (p: number) => gasZ(0, 0, p);
+      const he = (p: number) => gasZ(0, 1, p);
+
+      expect(o2(100)).toBeCloseTo(0.9549, 4);
+      expect(o2(200)).toBeCloseTo(0.9571, 4);
+      expect(o2(300)).toBeCloseTo(0.9977, 4);
+      expect(n2(100)).toBeCloseTo(1.0053, 4);
+      expect(n2(200)).toBeCloseTo(1.0567, 4);
+      expect(n2(300)).toBeCloseTo(1.1417, 4);
+      expect(he(100)).toBeCloseTo(1.0479, 4);
+      expect(he(200)).toBeCloseTo(1.0944, 4);
+      expect(he(300)).toBeCloseTo(1.1397, 4);
+
+      // Published values near room temperature: N2 and He stiffer than ideal
+      // at 200 bar, O2 a little softer.
+      expect(n2(200)).toBeGreaterThanOrEqual(1.03);
+      expect(n2(200)).toBeLessThanOrEqual(1.06);
+      expect(he(200)).toBeGreaterThanOrEqual(1.09);
+      expect(he(200)).toBeLessThanOrEqual(1.1);
+      expect(o2(200)).toBeLessThan(1);
+
+      // Mixes combine linearly by mole fraction.
+      const air = gasZ(0.21, 0, 200);
+      expect(air).toBeCloseTo(0.21 * o2(200) + 0.79 * n2(200), 10);
+    });
+  });
+
+  describe("Plans hold up under an independent real-gas replay", () => {
+    // Written independently of realGas.ts: Z = 1 + c1*P + c2*P^2 + c3*P^3 in
+    // absolute bar, coefficients from a fit to Perry's Chemical Engineers'
+    // Handbook data, mixed linearly by mole fraction.
+    const ATM = 1.01325;
+    const COEFF: Record<"o2" | "n2" | "he", [number, number, number]> = {
+      o2: [-7.18092073703e-4, 2.81852572808e-6, -1.50290620492e-9],
+      n2: [-2.19260353292e-4, 2.92844845532e-6, -2.07613482075e-9],
+      he: [4.87320026468e-4, -8.83632921053e-8, 5.33304543646e-11],
+    };
+    type Moles = { o2: number; n2: number; he: number };
+    const total = (m: Moles) => m.o2 + m.n2 + m.he;
+    const zOf = (m: Moles, abs: number) => {
+      const p = Math.min(500, Math.max(0, abs));
+      let z = 1;
+      for (const k of ["o2", "n2", "he"] as const) {
+        const [a, b, c] = COEFF[k];
+        z += (m[k] / total(m)) * (a * p + b * p ** 2 + c * p ** 3);
+      }
+      return z;
+    };
+    const mix = (o2Pct: number, hePct: number, amount: number): Moles => ({
+      o2: (amount * o2Pct) / 100,
+      he: (amount * hePct) / 100,
+      n2: (amount * (100 - o2Pct - hePct)) / 100,
+    });
+    // Moles (as ideal bar) in the tank at `gauge`, for a composition `m`.
+    const amountAt = (m: Moles, gauge: number) =>
+      (gauge + ATM) / zOf(m, gauge + ATM);
+
+    const replay = (
+      start: TankState,
+      result: ReturnType<typeof calculateBlendingSteps>,
+      gases: Gas[],
+    ) => {
+      const shape = mix(start.o2, start.he, 1);
+      let tank = mix(start.o2, start.he, amountAt(shape, start.pressure));
+      for (const step of result.steps) {
+        const abs = step.toPressure + ATM;
+        if (step.drainedPressure !== undefined) {
+          const keep = amountAt(tank, step.toPressure) / total(tank);
+          tank = { o2: tank.o2 * keep, n2: tank.n2 * keep, he: tank.he * keep };
+          continue;
+        }
+        const gas = gases.find((g) => g.name === step.gas);
+        if (!gas) throw new Error(`unknown gas ${step.gas}`);
+        // Find the amount added so the tank reads the step's gauge pressure.
+        let added = step.toPressure - step.fromPressure;
+        for (let i = 0; i < 50; i++) {
+          const g = mix(gas.o2, gas.he, added);
+          const after = {
+            o2: tank.o2 + g.o2,
+            n2: tank.n2 + g.n2,
+            he: tank.he + g.he,
+          };
+          added = abs / zOf(after, abs) - total(tank);
+        }
+        const g = mix(gas.o2, gas.he, added);
+        tank = { o2: tank.o2 + g.o2, n2: tank.n2 + g.n2, he: tank.he + g.he };
+      }
+      return {
+        o2: (100 * tank.o2) / total(tank),
+        he: (100 * tank.he) / total(tank),
+      };
+    };
+
+    const gases: Gas[] = [
+      { name: "Air", o2: 21, he: 0 },
+      { name: "O2", o2: 100, he: 0 },
+      { name: "Helium", o2: 0, he: 100 },
+    ];
+    const emptyAir: TankState = { volume: 12, o2: 21, he: 0, pressure: 0 };
+
+    const nitroxAndTrimix: Gas[] = [
+      { name: "Nitrox 32", o2: 32, he: 0 },
+      { name: "10/70", o2: 10, he: 70 },
+    ];
+
+    const cases: [string, TankState, TargetGas, Gas[]?][] = [
+      ["EAN32 to 232 from empty", emptyAir, { o2: 32, he: 0, pressure: 232 }],
+      ["EAN36 to 232 from empty", emptyAir, { o2: 36, he: 0, pressure: 232 }],
+      ["EAN50 to 200 from empty", emptyAir, { o2: 50, he: 0, pressure: 200 }],
+      ["21/35 to 232 from empty", emptyAir, { o2: 21, he: 35, pressure: 232 }],
+      ["18/45 to 232 from empty", emptyAir, { o2: 18, he: 45, pressure: 232 }],
+      ["10/70 to 232 from empty", emptyAir, { o2: 10, he: 70, pressure: 232 }],
+      [
+        "EAN32 top-up from 50 bar EAN32",
+        { volume: 12, o2: 32, he: 0, pressure: 50 },
+        { o2: 32, he: 0, pressure: 232 },
+      ],
+      [
+        "18/45 from 100 bar air, partial drain",
+        { volume: 12, o2: 21, he: 0, pressure: 100 },
+        { o2: 18, he: 45, pressure: 200 },
+      ],
+      [
+        "18/45 from 113 bar 14/13 with Nitrox 32 and 10/70, full drain",
+        { volume: 11, o2: 14, he: 13, pressure: 113 },
+        { o2: 18, he: 45, pressure: 220 },
+        nitroxAndTrimix,
+      ],
+    ];
+
+    for (const [name, start, target, available = gases] of cases) {
+      it(`${name} lands within 0.5 points`, () => {
+        const result = calculateBlendingSteps(start, target, available);
+        expect(result.success).toBe(true);
+        const real = replay(start, result, available);
+        expect(Math.abs(real.o2 - target.o2)).toBeLessThanOrEqual(0.5);
+        expect(Math.abs(real.he - target.he)).toBeLessThanOrEqual(0.5);
+        const last = result.steps[result.steps.length - 1];
+        expect(last.toPressure).toBeCloseTo(target.pressure, 1);
+      });
+    }
+
+    it("plans the drain cases with a drain step", () => {
+      const partial = calculateBlendingSteps(cases[7][1], cases[7][2], gases);
+      expect(partial.steps[0].drainedPressure).toBeGreaterThan(0);
+      expect(partial.steps[0].toPressure).toBeGreaterThan(0);
+      const full = calculateBlendingSteps(
+        cases[8][1],
+        cases[8][2],
+        nitroxAndTrimix,
+      );
+      expect(full.steps[0].drainedPressure).toBeGreaterThan(0);
+      expect(full.steps[0].toPressure).toBe(0);
+    });
+
+    it("fills EAN32 to 232 with O2 to about 30.4 bar, then air", () => {
+      const result = calculateBlendingSteps(
+        emptyAir,
+        { o2: 32, he: 0, pressure: 232 },
+        gases,
+      );
+      expect(result.steps.map((s) => s.gas)).toEqual(["O2", "Air"]);
+      expect(result.steps[0].toPressure).toBeCloseTo(30.4, 1);
+    });
+
+    it("an ideal-gas plan for EAN32 and EAN36 lands rich", () => {
+      // O2 first, then air, split by the ideal gas law (empty tank ignored).
+      const idealPlan = (o2Pct: number, pressure: number) => {
+        const o2Bar = (pressure * (o2Pct - 21)) / 79;
+        return {
+          steps: [
+            { gas: "O2", fromPressure: 0, toPressure: o2Bar },
+            { gas: "Air", fromPressure: o2Bar, toPressure: pressure },
+          ],
+        } as unknown as ReturnType<typeof calculateBlendingSteps>;
+      };
+      const ean32 = replay(emptyAir, idealPlan(32, 232), gases);
+      const ean36 = replay(emptyAir, idealPlan(36, 232), gases);
+      expect(ean32.o2).toBeGreaterThan(32.5);
+      expect(ean32.o2).toBeLessThan(33);
+      expect(ean36.o2).toBeGreaterThan(36.7);
+      expect(ean36.o2).toBeLessThan(37.3);
     });
   });
 });

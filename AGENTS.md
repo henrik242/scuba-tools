@@ -16,6 +16,7 @@ Production site: https://scuba.synth.no/
 ```
 src/
   gasBlender.ts         # Core blending algorithm (pure functions, no React)
+  realGas.ts            # Compressibility (Z) model used by the blender
   gasBlender.test.ts    # ~1600 lines of tests — run these after any logic change
   GasBlender.tsx        # React UI for the blender
   tankCalculator.ts     # Buoyancy/spec calculations (pure functions)
@@ -50,15 +51,18 @@ After a build, `dist/` contains `index.html`, `blender.html`, and `tanks.html` (
 
 The algorithm files (`gasBlender.ts`, `tankCalculator.ts`) are **pure TypeScript with no React dependencies**. Keep them that way. The UI components consume their return values and own all state/URL persistence.
 
-### Ideal gas law
+### Real gas law
 
-The blender uses **partial pressures**, not volumetric fractions directly. For a tank at pressure P with O₂ fraction f:
+The blender tracks gas as **mole-equivalent pressure** (MEP, "ideal bar"): absolute pressure divided by the mix's compressibility Z at that absolute pressure, which is proportional to moles. For a tank at gauge pressure P with O₂ fraction f:
 
 ```
-O₂ partial pressure = f × P
+MEP   = (P + 1.01325) / Z_mix(P + 1.01325)
+O₂ MEP = f × MEP
 ```
 
-All deltas and additions are computed in partial-pressure space (bar), then converted back to percentages for display. Tolerances for a successful blend are ±0.5% O₂, ±0.5% He, ±1 bar pressure.
+`realGas.ts` fits Z for O₂, N₂ and He as cubics in absolute bar (fit to Perry's Chemical Engineers' Handbook data) and mixes them linearly by mole fraction. At filling pressures N₂ and He are stiffer than ideal (Z ≈ 1.06 and 1.09 at 200 bar) and O₂ a little softer (≈ 0.96), so a plan made with the ideal gas law lands rich in O₂ (EAN32/EAN36 to 232 bar end up about 32.7/37 %). The 1 atm left in an "empty" tank is part of the mix. Gauge pressure is recovered from MEP by fixed-point iteration (`mepToGauge`).
+
+All deltas and additions are computed in MEP space, then converted back to gauge bar and percentages for display. Tolerances for a successful blend are ±0.5% O₂, ±0.5% He, ±1 bar pressure.
 
 ### Blending step order
 
@@ -104,7 +108,7 @@ A few scuba-specific things to keep in mind:
 - Run `npm test` after **any** change to `gasBlender.ts` or `tankCalculator.ts`.
 - The test suite (`gasBlender.test.ts`) covers ~100 scenarios including edge cases and real-world blends. If a new algorithm path is added, add corresponding tests.
 - Tests use `bun test` with plain `expect` assertions — no mocking framework is needed for the pure-function files.
-- Gas usage is tracked as `pressure × tank volume` (in litres); the `gasUsage.test.ts` file verifies this separately.
+- Gas usage is tracked as `MEP added × tank volume` (free litres, real-gas corrected); the `gasUsage.test.ts` file verifies this separately.
 
 ## What to avoid
 

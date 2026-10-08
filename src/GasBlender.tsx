@@ -26,7 +26,7 @@ const findDefaultGas = (o2: number, he: number): Gas | undefined => {
 function GasBlender() {
   // Starting gas state
   const [startVolume, setStartVolume] = useState<number>(11);
-  const [startO2, setStartO2] = useState<number>(0);
+  const [startO2, setStartO2] = useState<number>(21);
   const [startHe, setStartHe] = useState<number>(0);
   const [startPressure, setStartPressure] = useState<number>(0);
 

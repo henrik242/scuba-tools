@@ -4,13 +4,14 @@
  * Uses real gas partial pressure calculations for accurate gas blending.
  *
  * Internal state is tracked as mole-equivalent pressures (MEP = n·R·T/V,
- * proportional to moles). This corrects for the non-ideal behaviour of
- * O₂ and N₂ at high pressures (van der Waals Z ≠ 1). He is nearly ideal.
+ * proportional to moles): absolute pressure divided by the mix's Z at that
+ * absolute pressure (see realGas.ts). The atmosphere in an "empty" cylinder
+ * counts as part of the mix.
  *
  * All inputs and outputs remain in gauge bar, as read on a pressure gauge.
  */
 
-import { gasZ, mepToGauge } from "./realGas.ts";
+import { gaugeToMEP, mepToGauge } from "./realGas.ts";
 
 export interface Gas {
   name: string;
@@ -232,13 +233,11 @@ function mepToReach(
   for (let i = 0; i < 10; i++) {
     const after = now + amount;
     const next =
-      toPressure /
-        gasZ(
-          (state.o2 + gasO2 * amount) / after,
-          (state.he + gasHe * amount) / after,
-          toPressure,
-        ) -
-      now;
+      gaugeToMEP(
+        toPressure,
+        (state.o2 + gasO2 * amount) / after,
+        (state.he + gasHe * amount) / after,
+      ) - now;
     if (Math.abs(next - amount) < 1e-6) return next;
     amount = next;
   }
@@ -273,15 +272,18 @@ function solveO2FillPressure(
       (oxyO2 - topO2);
     const heFinal =
       (state.he + oxyHe * o2MEP + topHe * (finalMEP - now - o2MEP)) / finalMEP;
-    finalMEP = targetPressure / gasZ(targetO2Frac, heFinal, targetPressure);
+    finalMEP = gaugeToMEP(targetPressure, targetO2Frac, heFinal);
   }
   const added = Math.max(0, o2MEP);
   const after = now + added;
   if (after <= 0) return 0;
-  return mepToGauge(
-    after,
-    (state.o2 + oxyO2 * added) / after,
-    (state.he + oxyHe * added) / after,
+  return Math.max(
+    0,
+    mepToGauge(
+      after,
+      (state.o2 + oxyO2 * added) / after,
+      (state.he + oxyHe * added) / after,
+    ),
   );
 }
 
@@ -321,8 +323,11 @@ export function calculateBlendingSteps(
   const targetHeFraction = targetGas.he / 100;
   const targetN2Fraction = 1 - targetO2Fraction - targetHeFraction;
 
-  const targetMEP =
-    targetPressure / gasZ(targetO2Fraction, targetHeFraction, targetPressure);
+  const targetMEP = gaugeToMEP(
+    targetPressure,
+    targetO2Fraction,
+    targetHeFraction,
+  );
   const targetO2MEP = targetO2Fraction * targetMEP;
   const targetHeMEP = targetHeFraction * targetMEP;
   const targetN2MEP = targetN2Fraction * targetMEP;
@@ -331,10 +336,11 @@ export function calculateBlendingSteps(
   let currentPressure = startingGas.pressure;
   const startO2Frac = startingGas.o2 / 100;
   const startHeFrac = startingGas.he / 100;
-  const startMEP =
-    currentPressure <= 0
-      ? 0
-      : currentPressure / gasZ(startO2Frac, startHeFrac, currentPressure);
+  const startMEP = gaugeToMEP(
+    Math.max(0, currentPressure),
+    startO2Frac,
+    startHeFrac,
+  );
   let currentO2MEP = startO2Frac * startMEP;
   let currentHeMEP = startHeFrac * startMEP;
   let currentN2MEP = Math.max(0, (1 - startO2Frac - startHeFrac) * startMEP);
@@ -372,21 +378,15 @@ export function calculateBlendingSteps(
     const previousFractions = getFractions();
     const newPressure = forceComplete ? 0 : toPressure;
 
-    // Scale MEPs: composition unchanged, moles reduce as (newMEP / oldMEP)
-    // MEP_total = gauge / Z(composition, gauge), so ratio = (new/Z_new) / (old/Z_old)
-    const Z_before = gasZ(
+    // Composition is unchanged; moles scale by the ratio of MEPs at the two
+    // gauge pressures. Draining completely leaves 1 atm in the tank.
+    const mepBefore = currentO2MEP + currentHeMEP + currentN2MEP;
+    const mepAfter = gaugeToMEP(
+      newPressure,
       previousFractions.o2,
       previousFractions.he,
-      previousPressure,
     );
-    const Z_after =
-      newPressure <= 0
-        ? 1
-        : gasZ(previousFractions.o2, previousFractions.he, newPressure);
-    const mepRatio =
-      previousPressure <= 0
-        ? 0
-        : newPressure / Z_after / (previousPressure / Z_before);
+    const mepRatio = mepBefore <= 0 ? 0 : Math.min(1, mepAfter / mepBefore);
 
     currentO2MEP *= mepRatio;
     currentHeMEP *= mepRatio;
@@ -562,9 +562,7 @@ export function calculateBlendingSteps(
   if (needsDrain) {
     const drainFracs = getFractions();
     const drainToGauge = roundTo(
-      drainToMEP <= 0
-        ? 0
-        : mepToGauge(drainToMEP, drainFracs.o2, drainFracs.he),
+      Math.max(0, mepToGauge(drainToMEP, drainFracs.o2, drainFracs.he)),
       1,
     );
     const drainedAmount = currentPressure - drainToGauge;
@@ -592,16 +590,7 @@ export function calculateBlendingSteps(
       const tO2 =
         (currentO2MEP + (heGas.o2 / 100) * heMEPtoAdd) / totalMEP_target;
       const tHe = (currentHeMEP + heFraction * heMEPtoAdd) / totalMEP_target;
-      // Solve P = Z_mix(composition, P) × totalMEP_target iteratively
-      let P_he = currentPressure + heMEPtoAdd; // initial estimate
-      for (let i = 0; i < 6; i++) {
-        const next = gasZ(tO2, tHe, P_he) * totalMEP_target;
-        if (Math.abs(next - P_he) < 0.001) {
-          P_he = next;
-          break;
-        }
-        P_he = next;
-      }
+      const P_he = mepToGauge(totalMEP_target, tO2, tHe);
       const heGaugeToAdd = P_he - currentPressure;
       recordGasAddition(heGas, heGaugeToAdd, `Add ${heGas.name}`);
     }
