@@ -1784,6 +1784,28 @@ describe("Gas Blender - Trimix Calculations", () => {
         { o2: 18, he: 45, pressure: 220 },
         nitroxAndTrimix,
       ],
+      // Rich nitrox down to leaner: the air topping brings O2 too.
+      [
+        "EAN32 from 200 bar EAN40, drain",
+        { volume: 12, o2: 40, he: 0, pressure: 200 },
+        { o2: 32, he: 0, pressure: 232 },
+      ],
+      [
+        "EAN32 from 190 bar EAN38, drain with no excess yet",
+        { volume: 12, o2: 38, he: 0, pressure: 190 },
+        { o2: 32, he: 0, pressure: 232 },
+      ],
+      [
+        "EAN32 from 150 bar EAN50, drain",
+        { volume: 12, o2: 50, he: 0, pressure: 150 },
+        { o2: 32, he: 0, pressure: 232 },
+      ],
+      [
+        "EAN32 from 200 bar EAN40 with air only, drain",
+        { volume: 12, o2: 40, he: 0, pressure: 200 },
+        { o2: 32, he: 0, pressure: 232 },
+        [{ name: "Air", o2: 21, he: 0 }],
+      ],
     ];
 
     for (const [name, start, target, available = gases] of cases) {

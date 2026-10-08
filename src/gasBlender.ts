@@ -166,6 +166,44 @@ function calcDrainMEP_withO2(
 }
 
 /**
+ * No helium step: optional pure O2, then a topping gas. The topping gas brings
+ * O2 of its own, so keeping just the target O2 is not enough; keep the most
+ * that leaves both fills non-negative. With only the topping gas the amount
+ * kept is fixed exactly. Returns undefined when no amount kept works.
+ */
+function calcDrainMEP_noHe(
+  ctx: DrainCalcCtx,
+  currentMEP: number,
+  o2Gas: Gas | undefined,
+  topupGas: Gas,
+): number | undefined {
+  const { fractions, targetO2MEP, targetN2MEP, targetMEP } = ctx;
+  const top = gasComposition(topupGas);
+  if (!o2Gas) {
+    const denominator = fractions.o2 - top.o2;
+    if (Math.abs(denominator) < NEAR_ZERO) return undefined;
+    const kept = (targetO2MEP - targetMEP * top.o2) / denominator;
+    return kept >= -NEAR_ZERO && kept <= currentMEP + NEAR_ZERO
+      ? Math.max(0, kept)
+      : undefined;
+  }
+  // N2 comes only from what is kept and the topping gas; O2 makes up the rest.
+  // topping = (targetN2 - kept·n2) / top.n2, O2 fill = targetO2 - kept·o2 - topping·top.o2
+  if (top.n2 < NEAR_ZERO) return undefined;
+  const ratio = top.o2 / top.n2;
+  let upper = currentMEP;
+  let lower = 0;
+  if (fractions.n2 > NEAR_ZERO)
+    upper = Math.min(upper, targetN2MEP / fractions.n2);
+  const perKept = fractions.o2 - fractions.n2 * ratio;
+  const fromEmpty = targetO2MEP - targetN2MEP * ratio;
+  if (perKept > NEAR_ZERO) upper = Math.min(upper, fromEmpty / perKept);
+  else if (perKept < -NEAR_ZERO) lower = Math.max(lower, fromEmpty / perKept);
+  else if (fromEmpty < -NEAR_ZERO) return undefined;
+  return lower <= upper + NEAR_ZERO ? Math.max(0, upper) : undefined;
+}
+
+/**
  * Pure He source, single Air/Nitrox topping (no pure O2 available).
  */
 function calcDrainMEP_pureHe_airOnly(
@@ -491,6 +529,25 @@ export function calculateBlendingSteps(
     }
     if (deltaN2 < -MIN_MEP_DELTA && fractions.n2 > 0.001) {
       drainToMEP = Math.min(drainToMEP, targetN2MEP / fractions.n2);
+    }
+  }
+
+  // Nitrox (no helium step): the topping gas adds O2 too, so the plain excess
+  // bounds above can keep too much, or miss a needed drain altogether.
+  if (
+    deltaHe <= MIN_MEP_DELTA &&
+    targetHeMEP <= MIN_MEP_DELTA &&
+    topupGases.length > 0
+  ) {
+    const kept = calcDrainMEP_noHe(
+      { fractions, targetO2MEP, targetHeMEP, targetN2MEP, targetMEP },
+      currentTotalMEP,
+      pureO2,
+      topupGases[0],
+    );
+    if (kept !== undefined && kept < currentTotalMEP - MIN_MEP_DELTA) {
+      needsDrain = true;
+      drainToMEP = Math.min(drainToMEP, kept);
     }
   }
 
